@@ -1,0 +1,133 @@
+version: '3.9'
+
+##############################################################################
+# Docker Compose - Ambiente de Produção
+#
+# Este arquivo configura o ambiente de produção com otimizações:
+# - Frontend servido via Nginx (build estático)
+# - Backend compilado sem devtools
+# - Configurações de segurança e performance
+# - Healthchecks rigorosos
+# - Restart policies
+#
+# Uso: docker-compose -f docker-compose.prod.yml up -d
+##############################################################################
+
+services:
+  #############################################################################
+  # PostgreSQL Database
+  #############################################################################
+  postgres:
+    image: postgres:15-alpine
+    container_name: claude-agents-postgres-prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-claudeagents}
+      POSTGRES_USER: ${DB_USER:-admin}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=en_US.UTF-8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data-prod:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - claude-network-prod
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-admin} -d ${DB_NAME:-claudeagents}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  #############################################################################
+  # Backend - Spring Boot Application
+  #############################################################################
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+      args:
+        - SPRING_PROFILE=prod
+    container_name: claude-agents-backend-prod
+    restart: unless-stopped
+    env_file:
+      - ../backend/.env
+    environment:
+      # Override para usar PostgreSQL no Docker network
+      DB_HOST: postgres
+      DB_PORT: 5432
+      SPRING_PROFILES_ACTIVE: prod
+      # JVM Options para produção
+      JAVA_OPTS: >-
+        -Xms512m
+        -Xmx1024m
+        -XX:+UseG1GC
+        -XX:MaxGCPauseMillis=200
+        -XX:+HeapDumpOnOutOfMemoryError
+        -XX:HeapDumpPath=/tmp/heapdump.hprof
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - claude-network-prod
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8080/api/public/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  #############################################################################
+  # Frontend - Nginx serving static build
+  #############################################################################
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile.prod
+      args:
+        - VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://localhost:8080/api}
+    container_name: claude-agents-frontend-prod
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - claude-network-prod
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:80 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+##############################################################################
+# Networks
+##############################################################################
+networks:
+  claude-network-prod:
+    driver: bridge
+    name: claude-network-prod
+
+##############################################################################
+# Volumes
+##############################################################################
+volumes:
+  postgres-data-prod:
+    driver: local
+    name: claude-agents-postgres-data-prod

@@ -1,0 +1,27 @@
+spring:
+  # DevTools Configuration
+  devtools:
+    restart:
+      enabled: true
+    livereload:
+      enabled: true
+
+  # JPA Configuration for Development
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+# Logging Configuration for Development
+logging:
+  level:
+    root: INFO
+    com.simplifica: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.web: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.flywaydb: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} %-5level [%thread] %logger{36} - %msg%n"

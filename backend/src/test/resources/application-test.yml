@@ -1,0 +1,43 @@
+spring:
+  # H2 In-Memory Database for Testing
+  datasource:
+    url: jdbc:h2:mem:testdb;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+
+  # JPA Configuration for Testing
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  # Flyway disabled for tests (using schema.sql instead)
+  flyway:
+    enabled: false
+
+  # Disable OAuth2 auto-configuration in tests
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.security.oauth2.client.servlet.OAuth2ClientAutoConfiguration
+
+# JWT Configuration for Testing
+app:
+  jwt:
+    secret: test-secret-key-for-unit-tests-must-be-at-least-256-bits-long-for-hs256-algorithm
+    expiration-ms: 3600000
+  oauth:
+    redirect-base-url: http://localhost:8080/api
+    frontend-redirect-url: http://localhost:5173/auth/callback
+
+# Logging Configuration for Testing
+logging:
+  level:
+    root: WARN
+    com.simplifica: DEBUG
+    org.springframework.security: WARN
+    org.hibernate.SQL: WARN

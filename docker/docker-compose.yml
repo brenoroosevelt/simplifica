@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: simplifica-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: simplifica
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-test-password}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - simplifica-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d simplifica"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: simplifica-backend
+    ports:
+      - "8080:8080"
+    env_file:
+      - ../backend/.env
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: simplifica
+      DB_USER: admin
+      DB_PASSWORD: ${DB_PASSWORD:-test-password}
+      SPRING_PROFILES_ACTIVE: dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - simplifica-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8080/api/public/health || exit 1"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: simplifica-frontend
+    ports:
+      - "5173:5173"
+    env_file:
+      - ../frontend/.env
+    volumes:
+      - ../frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - simplifica-network
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+    name: simplifica-postgres-data
+
+networks:
+  simplifica-network:
+    name: simplifica-network
+    driver: bridge

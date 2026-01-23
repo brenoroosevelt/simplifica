@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tree:*)",
+      "Bash(docker exec:*)",
+      "Bash(ls:*)",
+      "Bash(docker-compose config:*)",
+      "Bash(if [ ! -f /home/breno/dev/claude-agents/backend/.env ])",
+      "Bash(then echo \"✓ backend/.env não existe \\(correto\\)\")",
+      "Bash(fi)",
+      "Bash(if [ ! -f /home/breno/dev/claude-agents/frontend/.env ])",
+      "Bash(then echo \"✓ frontend/.env não existe \\(correto\\)\")",
+      "Bash(docker-compose up:*)",
+      "Bash(docker-compose ps:*)",
+      "Bash(docker-compose down:*)",
+      "Bash(git -C /home/breno/dev/claude-agents status)",
+      "Bash(npm create:*)",
+      "Bash(npm install)",
+      "Bash(test:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm test:*)",
+      "Bash(npm run lint)",
+      "Bash(timeout 10 npm run dev)",
+      "Bash(mvn clean:*)",
+      "Bash(mvn test)",
+      "Bash(mvn checkstyle:check:*)",
+      "Bash(mvn test:*)",
+      "Bash(grep:*)",
+      "Bash(chmod:*)",
+      "Bash(bash:*)",
+      "Bash(docker-compose:*)",
+      "Bash(wc:*)",
+      "Bash(find:*)"
+    ]
+  }
+}

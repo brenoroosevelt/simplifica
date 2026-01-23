@@ -1,0 +1,120 @@
+spring:
+  application:
+    name: simplifica
+
+  # Datasource Configuration
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:simplifica}
+    username: ${DB_USER:admin}
+    password: ${DB_PASSWORD:password}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  # JPA Configuration
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+    show-sql: false
+    open-in-view: false
+
+  # Flyway Configuration
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+    validate-on-migrate: true
+
+  # OAuth2 Client Configuration
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${OAUTH_GOOGLE_CLIENT_ID}
+            client-secret: ${OAUTH_GOOGLE_CLIENT_SECRET}
+            scope:
+              - email
+              - profile
+            redirect-uri: ${OAUTH_REDIRECT_BASE_URL}/login/oauth2/code/google
+            authorization-grant-type: authorization_code
+
+          microsoft:
+            client-id: ${OAUTH_MICROSOFT_CLIENT_ID}
+            client-secret: ${OAUTH_MICROSOFT_CLIENT_SECRET}
+            scope:
+              - openid
+              - email
+              - profile
+            redirect-uri: ${OAUTH_REDIRECT_BASE_URL}/login/oauth2/code/microsoft
+            authorization-grant-type: authorization_code
+            client-name: Microsoft
+
+        provider:
+          microsoft:
+            authorization-uri: https://login.microsoftonline.com/common/oauth2/v2.0/authorize
+            token-uri: https://login.microsoftonline.com/common/oauth2/v2.0/token
+            user-info-uri: https://graph.microsoft.com/oidc/userinfo
+            user-name-attribute: sub
+            jwk-set-uri: https://login.microsoftonline.com/common/discovery/v2.0/keys
+
+# Server Configuration
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+  error:
+    include-message: always
+    include-binding-errors: always
+    include-stacktrace: on_param
+    include-exception: false
+
+# JWT Configuration
+app:
+  jwt:
+    secret: ${JWT_SECRET}
+    expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+  oauth:
+    redirect-base-url: ${OAUTH_REDIRECT_BASE_URL:http://localhost:8080/api}
+    frontend-redirect-url: ${FRONTEND_REDIRECT_URL:http://localhost:5173/auth/callback}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000}
+    allowed-methods: GET,POST,PUT,DELETE,OPTIONS,PATCH
+    allowed-headers: "*"
+    allow-credentials: true
+    max-age: 3600
+
+# Actuator Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when_authorized
+
+# Logging Configuration
+logging:
+  level:
+    root: INFO
+    com.simplifica: INFO
+    org.springframework.security: INFO
+    org.springframework.web: INFO
+    org.hibernate.SQL: INFO
+    org.flywaydb: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
