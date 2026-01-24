@@ -4,6 +4,7 @@ import com.simplifica.domain.entity.User;
 import com.simplifica.domain.entity.UserRole;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.Setter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -20,6 +21,9 @@ import java.util.UUID;
  * This class bridges the gap between our domain User entity and Spring Security's
  * authentication interfaces. It provides user information to the security context
  * during both OAuth2 and JWT authentication flows.
+ *
+ * The currentInstitutionId field is mutable and set by the TenantInterceptor based
+ * on the X-Institution-Id header in each request.
  */
 @Getter
 @AllArgsConstructor
@@ -31,6 +35,9 @@ public class UserPrincipal implements UserDetails, OAuth2User {
     private String pictureUrl;
     private Collection<? extends GrantedAuthority> authorities;
     private Map<String, Object> attributes;
+
+    @Setter
+    private UUID currentInstitutionId;
 
     /**
      * Creates a UserPrincipal from a User entity (for JWT authentication).
@@ -49,7 +56,8 @@ public class UserPrincipal implements UserDetails, OAuth2User {
                 user.getName(),
                 user.getPictureUrl(),
                 authorities,
-                Collections.emptyMap()
+                Collections.emptyMap(),
+                null // currentInstitutionId set later by interceptor
         );
     }
 
@@ -68,7 +76,8 @@ public class UserPrincipal implements UserDetails, OAuth2User {
                 userPrincipal.getName(),
                 userPrincipal.getPictureUrl(),
                 userPrincipal.getAuthorities(),
-                attributes
+                attributes,
+                null // currentInstitutionId set later by interceptor
         );
     }
 

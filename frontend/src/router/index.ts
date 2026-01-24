@@ -48,11 +48,80 @@ const routes: RouteRecordRaw[] = [
       requiresAuth: true,
     },
   },
+  {
+    path: '/institution-selection',
+    name: 'institution-selection',
+    component: () => import('@/views/private/InstitutionSelectionPage.vue'),
+    meta: {
+      layout: 'private',
+      requiresAuth: true,
+      requiresInstitution: false,
+    },
+  },
+  {
+    path: '/admin/institutions',
+    name: 'admin-institutions',
+    component: () => import('@/views/private/admin/InstitutionsPage.vue'),
+    meta: {
+      layout: 'private',
+      requiresAuth: true,
+      requiresInstitution: true,
+      requiresAdmin: true,
+    },
+  },
+  {
+    path: '/admin/users',
+    name: 'admin-users',
+    component: () => import('@/views/private/admin/UsersPage.vue'),
+    meta: {
+      layout: 'private',
+      requiresAuth: true,
+      requiresInstitution: true,
+      requiresAdmin: true,
+    },
+  },
+  {
+    path: '/admin/settings',
+    name: 'admin-settings',
+    component: () => import('@/views/private/admin/SettingsPage.vue'),
+    meta: {
+      layout: 'private',
+      requiresAuth: true,
+      requiresInstitution: true,
+      requiresAdmin: true,
+    },
+  },
 ]
 
 const router = createRouter({
   history: createWebHistory(),
   routes,
+  scrollBehavior(to, from, savedPosition) {
+    // Se há uma posição salva (botão voltar), use-a
+    if (savedPosition) {
+      return savedPosition
+    }
+
+    // Se há hash na URL (navegação por âncoras), scroll para o elemento
+    if (to.hash) {
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          resolve({
+            el: to.hash,
+            behavior: 'smooth',
+            top: 80, // Offset para compensar o header
+          })
+        }, 100)
+      })
+    }
+
+    // Por padrão, sempre scroll para o topo
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve({ top: 0, behavior: 'instant' })
+      }, 0)
+    })
+  },
 })
 
 // Setup navigation guards

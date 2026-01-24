@@ -9,13 +9,19 @@ const apiClient: AxiosInstance = axios.create({
   },
 })
 
-// Request interceptor - adicionar token de autenticação
+// Request interceptor - adicionar token de autenticação e instituição ativa
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const token = localStorage.getItem('auth_token')
 
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`
+    }
+
+    // Adicionar header X-Institution-Id se houver instituição ativa
+    const institutionId = localStorage.getItem('active_institution_id')
+    if (institutionId && config.headers) {
+      config.headers['X-Institution-Id'] = institutionId
     }
 
     return config

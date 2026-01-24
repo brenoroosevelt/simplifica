@@ -93,6 +93,7 @@ public class SecurityConfig {
 
                         // Admin endpoints
                         .requestMatchers("/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/institutions/**").hasRole("ADMIN")
 
                         // Protected endpoints
                         .requestMatchers("/auth/**").authenticated()

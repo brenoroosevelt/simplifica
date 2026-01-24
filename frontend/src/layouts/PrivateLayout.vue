@@ -1,18 +1,20 @@
 <template>
   <v-app>
-    <AppHeader />
+    <AppHeader variant="private" />
 
     <v-navigation-drawer
       v-model="drawer"
       :rail="isRail && !isMobile"
       :temporary="isMobile"
       :permanent="!isMobile"
+      elevation="0"
+      class="sidebar-drawer"
     >
       <AppSidebar />
     </v-navigation-drawer>
 
-    <v-main>
-      <v-container fluid>
+    <v-main class="private-main">
+      <v-container fluid class="pa-6">
         <slot />
       </v-container>
     </v-main>
@@ -51,3 +53,13 @@ onUnmounted(() => {
   window.removeEventListener('resize', updateMobileState)
 })
 </script>
+
+<style scoped lang="scss">
+.private-main {
+  background: #f8fafc;
+}
+
+.sidebar-drawer {
+  border-right: 1px solid #e2e8f0 !important;
+}
+</style>

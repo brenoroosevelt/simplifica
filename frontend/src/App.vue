@@ -29,6 +29,8 @@ const layoutComponent = computed(() => {
 </script>
 
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
 html,
 body {
   margin: 0;
@@ -38,9 +40,14 @@ body {
 }
 
 #app {
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   height: 100%;
+}
+
+/* Improve text rendering for Inter font */
+body {
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
 }
 </style>

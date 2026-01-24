@@ -4,6 +4,7 @@ import type { User } from '@/types/auth.types'
 import { OAuthProvider } from '@/types/auth.types'
 import { OAuthProviderFactory } from '@/services/oauth/provider.factory'
 import { authService } from '@/services/auth.service'
+import { useInstitutionStore } from './institution.store'
 
 export const useAuthStore = defineStore('auth', () => {
   // State
@@ -68,6 +69,10 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = null
     token.value = null
     localStorage.removeItem('auth_token')
+
+    // Reset institution store
+    const institutionStore = useInstitutionStore()
+    institutionStore.reset()
   }
 
   return {

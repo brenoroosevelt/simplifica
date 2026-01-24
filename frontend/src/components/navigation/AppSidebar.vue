@@ -1,6 +1,6 @@
 <template>
-  <div>
-    <v-list density="compact" nav>
+  <div class="sidebar-container">
+    <v-list density="compact" nav class="sidebar-menu">
       <v-list-item
         v-for="item in menuItems"
         :key="item.title"
@@ -8,12 +8,16 @@
         :prepend-icon="item.icon"
         :title="item.title"
         color="primary"
+        rounded="lg"
+        class="mb-1"
       />
 
       <template v-if="isAdmin">
-        <v-divider class="my-2" />
+        <v-divider class="my-4" />
 
-        <v-list-subheader>Administração</v-list-subheader>
+        <v-list-subheader class="text-caption text-uppercase font-weight-bold">
+          Administração
+        </v-list-subheader>
 
         <v-list-item
           v-for="item in adminItems"
@@ -22,12 +26,16 @@
           :prepend-icon="item.icon"
           :title="item.title"
           color="primary"
+          rounded="lg"
+          class="mb-1"
         />
       </template>
     </v-list>
 
-    <div class="pa-2 text-center">
-      <span class="text-caption text-grey">v1.0.0</span>
+    <v-spacer />
+
+    <div class="sidebar-footer">
+      <span class="text-caption text-medium-emphasis">v1.0.0</span>
     </div>
   </div>
 </template>
@@ -56,6 +64,11 @@ const adminItems = computed(() => {
 
   return [
     {
+      title: 'Instituições',
+      icon: 'mdi-office-building',
+      to: '/admin/institutions',
+    },
+    {
       title: 'Usuários',
       icon: 'mdi-account-group',
       to: '/admin/users',
@@ -68,3 +81,45 @@ const adminItems = computed(() => {
   ]
 })
 </script>
+
+<style scoped lang="scss">
+.sidebar-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: white;
+}
+
+.sidebar-menu {
+  padding: 16px 12px;
+  flex: 1;
+}
+
+.sidebar-footer {
+  padding: 16px;
+  text-align: center;
+  border-top: 1px solid #e2e8f0;
+}
+
+// Ajustar estilos dos itens de menu
+:deep(.v-list-item) {
+  margin-bottom: 4px;
+
+  &:hover {
+    background: rgba(var(--v-theme-primary), 0.04);
+  }
+
+  &.v-list-item--active {
+    background: rgba(var(--v-theme-primary), 0.08);
+    color: rgb(var(--v-theme-primary));
+    font-weight: 600;
+  }
+}
+
+:deep(.v-list-subheader) {
+  padding: 8px 16px;
+  color: #64748b;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+}
+</style>

@@ -1,39 +1,33 @@
 <template>
   <div>
-    <v-row>
-      <v-col cols="12">
-        <h1 class="text-h3 font-weight-bold mb-2">
-          Meu Perfil
-        </h1>
-        <p class="text-h6 text-grey-darken-1">
-          Gerencie suas informações pessoais
-        </p>
-      </v-col>
-    </v-row>
+    <PageHeader
+      title="Meu Perfil"
+      subtitle="Gerencie suas informações pessoais"
+    />
 
-    <v-row class="mt-6">
+    <v-row>
       <v-col cols="12" md="4">
-        <v-card elevation="2">
+        <v-card variant="flat" border>
           <v-card-text class="text-center pa-6">
-            <v-avatar v-if="user?.pictureUrl" size="120" class="mb-4">
+            <v-avatar v-if="user?.pictureUrl" size="100" class="mb-4">
               <v-img :src="user.pictureUrl" :alt="user.name" />
             </v-avatar>
-            <v-avatar v-else color="primary" size="120" class="mb-4">
-              <span class="text-h3 text-white">{{ userInitials }}</span>
+            <v-avatar v-else color="primary" size="100" class="mb-4">
+              <span class="text-h5 text-white">{{ userInitials }}</span>
             </v-avatar>
 
-            <h2 class="text-h5 font-weight-bold mb-1">
+            <h2 class="text-h6 font-weight-medium mb-1">
               {{ user?.name }}
             </h2>
-            <p class="text-body-2 text-grey-darken-1 mb-3">
+            <p class="text-body-2 text-grey-darken-1 mb-2">
               {{ user?.email }}
             </p>
 
-            <v-chip :color="statusColor" variant="tonal" class="mb-2">
+            <v-chip :color="statusColor" variant="tonal" size="small" class="mb-2">
               {{ statusText }}
             </v-chip>
 
-            <v-chip v-if="user?.role === 'ADMIN'" color="primary" variant="tonal">
+            <v-chip v-if="user?.role === 'ADMIN'" color="primary" variant="tonal" size="small">
               Administrador
             </v-chip>
           </v-card-text>
@@ -42,49 +36,45 @@
 
           <v-card-actions>
             <v-btn block variant="text" prepend-icon="mdi-pencil" disabled>
-              Editar Foto
+              Alterar Foto
             </v-btn>
           </v-card-actions>
         </v-card>
       </v-col>
 
       <v-col cols="12" md="8">
-        <v-card elevation="2">
-          <v-card-title class="bg-primary text-white">
-            Informações da Conta
-          </v-card-title>
-
+        <v-card variant="flat" border>
           <v-card-text class="pa-6">
             <v-row>
               <v-col cols="12" md="6">
                 <div class="mb-4">
                   <p class="text-caption text-grey-darken-1 mb-1">Nome Completo</p>
-                  <p class="text-h6">{{ user?.name }}</p>
+                  <p class="text-body-1">{{ user?.name }}</p>
                 </div>
               </v-col>
 
               <v-col cols="12" md="6">
                 <div class="mb-4">
                   <p class="text-caption text-grey-darken-1 mb-1">Email</p>
-                  <p class="text-h6">{{ user?.email }}</p>
+                  <p class="text-body-1">{{ user?.email }}</p>
                 </div>
               </v-col>
 
               <v-col cols="12" md="6">
                 <div class="mb-4">
                   <p class="text-caption text-grey-darken-1 mb-1">Provider de Autenticação</p>
-                  <p class="text-h6">
-                    <v-chip :color="providerColor" variant="tonal">
+                  <div class="mt-1">
+                    <v-chip :color="providerColor" variant="tonal" size="small">
                       {{ user?.provider }}
                     </v-chip>
-                  </p>
+                  </div>
                 </div>
               </v-col>
 
               <v-col cols="12" md="6">
                 <div class="mb-4">
                   <p class="text-caption text-grey-darken-1 mb-1">Função</p>
-                  <p class="text-h6">
+                  <p class="text-body-1">
                     {{ user?.role === 'ADMIN' ? 'Administrador' : 'Usuário' }}
                   </p>
                 </div>
@@ -93,14 +83,14 @@
               <v-col cols="12" md="6">
                 <div class="mb-4">
                   <p class="text-caption text-grey-darken-1 mb-1">Data de Cadastro</p>
-                  <p class="text-h6">{{ formattedCreatedAt }}</p>
+                  <p class="text-body-1">{{ formattedCreatedAt }}</p>
                 </div>
               </v-col>
 
               <v-col cols="12" md="6">
                 <div class="mb-4">
                   <p class="text-caption text-grey-darken-1 mb-1">Última Atualização</p>
-                  <p class="text-h6">{{ formattedUpdatedAt }}</p>
+                  <p class="text-body-1">{{ formattedUpdatedAt }}</p>
                 </div>
               </v-col>
             </v-row>
@@ -110,8 +100,8 @@
 
           <v-card-actions>
             <v-spacer />
-            <v-btn color="primary" variant="text" prepend-icon="mdi-pencil" disabled>
-              Editar Informações
+            <v-btn color="primary" variant="flat" prepend-icon="mdi-pencil" disabled>
+              Alterar Informações
             </v-btn>
           </v-card-actions>
         </v-card>
@@ -122,6 +112,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import PageHeader from '@/components/common/PageHeader.vue'
 import { useAuth } from '@/composables/useAuth'
 
 const { user } = useAuth()

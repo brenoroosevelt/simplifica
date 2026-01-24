@@ -162,3 +162,4 @@ log_info "Verifique os logs se algo não estiver funcionando."
 echo ""
 
 exit 0
+

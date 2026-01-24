@@ -39,7 +39,8 @@ class JwtTokenProviderTest {
                 "Test User",
                 null,
                 Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")),
-                Collections.emptyMap()
+                Collections.emptyMap(),
+                null
         );
 
         Authentication authentication = new UsernamePasswordAuthenticationToken(

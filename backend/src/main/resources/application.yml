@@ -96,6 +96,32 @@ app:
     allow-credentials: true
     max-age: 3600
 
+  # Feature Flags
+  features:
+    email-notifications: ${EMAIL_NOTIFICATIONS_ENABLED:false}
+
+  # Email Configuration
+  email:
+    smtp:
+      host: ${SMTP_HOST:smtp.gmail.com}
+      port: ${SMTP_PORT:587}
+      username: ${SMTP_USERNAME:}
+      password: ${SMTP_PASSWORD:}
+      auth: ${SMTP_AUTH:true}
+      starttls:
+        enable: ${SMTP_STARTTLS_ENABLE:true}
+    from: ${EMAIL_FROM:noreply@simplifica.com}
+    from-name: ${EMAIL_FROM_NAME:Simplifica}
+
+  # Storage Configuration
+  storage:
+    provider: ${STORAGE_PROVIDER:local}
+    local:
+      base-path: ${STORAGE_LOCAL_BASE_PATH:/tmp/simplifica/uploads}
+      public-url: ${STORAGE_LOCAL_PUBLIC_URL:http://localhost:8080/api/public/uploads}
+    max-file-size-mb: ${STORAGE_MAX_FILE_SIZE_MB:5}
+    allowed-extensions: ${STORAGE_ALLOWED_EXTENSIONS:jpg,jpeg,png,gif,webp}
+
 # Actuator Configuration
 management:
   endpoints:
