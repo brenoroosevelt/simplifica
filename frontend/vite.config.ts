@@ -18,6 +18,9 @@ export default defineConfig({
     },
   },
   server: {
+    allowedHosts: [
+      'lola-eyelike-nondestructively.ngrok-free.dev'
+    ],
     host: '0.0.0.0', // Acessível de fora do container
     port: 5173,
     // CRÍTICO para hot reload funcionar no Docker

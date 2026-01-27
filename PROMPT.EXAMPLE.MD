@@ -14,7 +14,4 @@ nenhum código, seu papel é coordernar os esforços entre o agente "coder" e o 
 Analise este plano de implementação e crie as trilhas diferentes, portanto veja todas as fases e tarefas e veja quais 
 podem ser implementadas em paralelo. Portanto, encontre todas as fases e taredas sem dependência e crie trilhas distintas.
 Em seguida, para cada trilha inicie um agente de codificação "coder" para implementar as tarefas dessa trilha. 
-Assim que o agente "coder" concluir seu trabalho, você precisará entregar a solução ao agente de revisão de código e,
-em seguida, deixar que o agente de revisão de código "code-reviewer" forneça feedback ao agente "coder". Este ciclo 
-deve continuar até que todas as alterações tenham sido implementadas, as tarefas marcadas como prontas e revisadas, 
-e os critérios de aceite atendidos. Ajuste o backlog e os status ao final do processo. Importante manter os padrões arquitetural existente no projeto.
+ERRO 

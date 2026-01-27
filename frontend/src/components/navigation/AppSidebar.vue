@@ -98,6 +98,15 @@ const adminItems = computed(() => {
     })
   }
 
+  // Processos: disponível para ADMIN e MANAGER
+  if (canManageUsers.value) {
+    items.push({
+      title: 'Processos',
+      icon: 'mdi-file-tree',
+      to: '/processes',
+    })
+  }
+
   // Configurações: apenas para ADMIN
   if (isAdmin.value) {
     items.push({

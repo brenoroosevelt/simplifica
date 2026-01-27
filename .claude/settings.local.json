@@ -41,7 +41,14 @@
       "Bash(./mvnw test:*)",
       "Bash(xargs:*)",
       "Bash(npx vue-tsc:*)",
-      "Bash(./mvnw clean test:*)"
+      "Bash(./mvnw clean test:*)",
+      "Bash(npx tsc:*)",
+      "Bash(./mvnw compile:*)",
+      "Bash(mvn:*)",
+      "Bash(echo:*)",
+      "Bash(pgrep:*)",
+      "Bash(lsof:*)",
+      "Bash(pkill:*)"
     ]
   }
 }

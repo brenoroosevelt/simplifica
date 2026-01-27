@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapeamento de Processo - Exemplo Bizagi</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .process-container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .process-step {
+            background-color: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        .process-step h3 {
+            margin-top: 0;
+            color: #1976d2;
+        }
+        .swimlane {
+            background-color: #fff3e0;
+            border: 2px solid #ff9800;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .decision-point {
+            background-color: #fff9c4;
+            border: 2px dashed #fbc02d;
+            padding: 15px;
+            margin: 15px 0;
+            text-align: center;
+            border-radius: 4px;
+        }
+        .metadata {
+            background-color: #f5f5f5;
+            padding: 15px;
+            margin-top: 30px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="process-container">
+        <h1>Processo: Solicitação de Material</h1>
+
+        <div class="metadata">
+            <strong>Código:</strong> PROC-001<br>
+            <strong>Versão:</strong> 1.0<br>
+            <strong>Data de Criação:</strong> 27/01/2026<br>
+            <strong>Status:</strong> Mapeado
+        </div>
+
+        <h2>Descrição do Processo</h2>
+        <p>
+            Este processo descreve o fluxo de solicitação de material dentro da organização,
+            desde a identificação da necessidade até o recebimento e armazenamento do material.
+        </p>
+
+        <h2>Fluxo do Processo</h2>
+
+        <div class="swimlane">
+            <h3>Raia: Solicitante</h3>
+
+            <div class="process-step">
+                <h3>1. Identificar Necessidade</h3>
+                <p>O colaborador identifica a necessidade de material para execução de suas atividades.</p>
+                <ul>
+                    <li>Verificar disponibilidade no estoque</li>
+                    <li>Definir especificações técnicas</li>
+                    <li>Estimar quantidade necessária</li>
+                </ul>
+            </div>
+
+            <div class="process-step">
+                <h3>2. Preencher Formulário de Solicitação</h3>
+                <p>Preenchimento do formulário padrão com as informações do material.</p>
+                <ul>
+                    <li>Descrição detalhada</li>
+                    <li>Quantidade</li>
+                    <li>Justificativa</li>
+                    <li>Centro de custo</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="swimlane">
+            <h3>Raia: Gestor Imediato</h3>
+
+            <div class="process-step">
+                <h3>3. Analisar Solicitação</h3>
+                <p>Gestor analisa a necessidade e viabilidade da solicitação.</p>
+            </div>
+
+            <div class="decision-point">
+                <h3>⚠️ Decisão: Aprovar Solicitação?</h3>
+                <p><strong>SIM</strong> → Segue para Compras</p>
+                <p><strong>NÃO</strong> → Retorna ao Solicitante com justificativa</p>
+            </div>
+        </div>
+
+        <div class="swimlane">
+            <h3>Raia: Setor de Compras</h3>
+
+            <div class="process-step">
+                <h3>4. Pesquisar Fornecedores</h3>
+                <p>Identificar fornecedores qualificados e solicitar cotações.</p>
+                <ul>
+                    <li>Consultar cadastro de fornecedores</li>
+                    <li>Solicitar no mínimo 3 cotações</li>
+                    <li>Verificar prazos de entrega</li>
+                </ul>
+            </div>
+
+            <div class="process-step">
+                <h3>5. Analisar Propostas</h3>
+                <p>Avaliar propostas considerando preço, prazo e qualidade.</p>
+            </div>
+
+            <div class="decision-point">
+                <h3>⚠️ Decisão: Valor > R$ 10.000?</h3>
+                <p><strong>SIM</strong> → Requer aprovação da Diretoria</p>
+                <p><strong>NÃO</strong> → Emitir pedido de compra</p>
+            </div>
+
+            <div class="process-step">
+                <h3>6. Emitir Pedido de Compra</h3>
+                <p>Gerar pedido de compra no sistema ERP.</p>
+            </div>
+        </div>
+
+        <div class="swimlane">
+            <h3>Raia: Almoxarifado</h3>
+
+            <div class="process-step">
+                <h3>7. Receber Material</h3>
+                <p>Conferir material recebido conforme especificações do pedido.</p>
+                <ul>
+                    <li>Conferir quantidade</li>
+                    <li>Verificar qualidade</li>
+                    <li>Confirmar nota fiscal</li>
+                </ul>
+            </div>
+
+            <div class="process-step">
+                <h3>8. Registrar Entrada no Sistema</h3>
+                <p>Lançar entrada do material no sistema de controle de estoque.</p>
+            </div>
+
+            <div class="process-step">
+                <h3>9. Notificar Solicitante</h3>
+                <p>Informar o solicitante sobre a disponibilidade do material.</p>
+            </div>
+        </div>
+
+        <h2>Indicadores de Performance</h2>
+        <div class="metadata">
+            <strong>Tempo Médio de Atendimento:</strong> 7 dias úteis<br>
+            <strong>Taxa de Aprovação:</strong> 85%<br>
+            <strong>Nível de Satisfação:</strong> 4.2/5.0
+        </div>
+
+        <h2>Documentos Relacionados</h2>
+        <ul>
+            <li>Formulário de Solicitação de Material (FORM-001)</li>
+            <li>Política de Compras (POL-002)</li>
+            <li>Manual de Almoxarifado (MAN-003)</li>
+        </ul>
+
+        <div class="metadata">
+            <strong>Última Atualização:</strong> 27/01/2026<br>
+            <strong>Responsável:</strong> Equipe de Processos<br>
+            <strong>Exportado de:</strong> Bizagi Modeler
+        </div>
+    </div>
+</body>
+</html>

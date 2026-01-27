@@ -26,15 +26,17 @@ import java.util.UUID;
 /**
  * Service for file storage operations.
  *
- * Handles image uploads with automatic thumbnail generation, file validation,
- * and deletion. Supports local filesystem storage with configurable paths and URLs.
+ * Handles image and HTML file uploads with automatic validation and storage.
+ * For images: generates thumbnails (150px max dimension, maintains aspect ratio).
+ * For HTML: validates content without thumbnail generation.
  *
  * Features:
  * - Validates file size and MIME type
- * - Generates thumbnails (150px max dimension, maintains aspect ratio)
- * - Returns public URLs for both original and thumbnail
+ * - Generates thumbnails for images only (150px max dimension, maintains aspect ratio)
+ * - Returns public URLs for files (and thumbnails when applicable)
  * - Automatic directory creation
  * - File deletion with cleanup
+ * - Support for process mapping HTML files (Bizagi exports)
  */
 @Service
 @Slf4j
@@ -42,6 +44,14 @@ public class FileStorageService {
 
     private static final int THUMBNAIL_SIZE = 150;
     private static final String THUMBNAIL_FOLDER = "thumbnails";
+    private static final long MAX_HTML_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+    private static final int HTML_VALIDATION_BUFFER_SIZE = 512; // Bytes to read from start of file
+    private static final Set<String> HTML_INDICATORS = Set.of(
+            "<!DOCTYPE", "<!doctype",
+            "<html", "<HTML",
+            "<head", "<HEAD",
+            "<body", "<BODY"
+    );
 
     /**
      * Whitelist of allowed folders for security.
@@ -50,7 +60,8 @@ public class FileStorageService {
     private static final Set<String> ALLOWED_FOLDERS = Set.of(
             "institutions",
             "value-chains",
-            "users"
+            "users",
+            "processes"
     );
 
     @Autowired
@@ -107,6 +118,57 @@ public class FileStorageService {
         } catch (IOException e) {
             log.error("Failed to store file: {}", originalFilename, e);
             throw new BadRequestException("Failed to store file: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Stores an HTML file without generating thumbnails.
+     *
+     * Validates HTML files exported from process mapping tools (e.g., Bizagi).
+     * Unlike image uploads, HTML files do not generate thumbnails.
+     *
+     * @param file the HTML file to store
+     * @param folder the folder name within the storage path (e.g., "processes")
+     * @return FileUploadResult containing URL for the HTML file (no thumbnail)
+     * @throws BadRequestException if validation fails
+     */
+    public FileUploadResult storeHtmlFile(MultipartFile file, String folder) {
+        log.info("Starting HTML file upload process for folder: {}", folder);
+
+        // Security: Validate folder before any file operations
+        validateFolder(folder);
+
+        if (file == null || file.isEmpty()) {
+            throw new BadRequestException("File is required and cannot be empty");
+        }
+
+        validateHtmlFile(file);
+
+        String originalFilename = file.getOriginalFilename();
+        String extension = getFileExtension(originalFilename);
+        String uniqueFilename = generateUniqueFilename(extension);
+
+        log.debug("Generated unique filename: {} for original filename: {}", uniqueFilename, originalFilename);
+
+        try {
+            Path folderPath = createDirectories(folder);
+            Path targetPath = folderPath.resolve(uniqueFilename);
+
+            saveOriginalFile(file, targetPath);
+
+            String fileUrl = buildPublicUrl(folder, uniqueFilename);
+
+            log.info("HTML file uploaded successfully: {}", fileUrl);
+
+            return FileUploadResult.builder()
+                    .fileUrl(fileUrl)
+                    .thumbnailUrl(null)  // No thumbnail for HTML files
+                    .filename(uniqueFilename)
+                    .build();
+
+        } catch (IOException e) {
+            log.error("Failed to store HTML file: {}", originalFilename, e);
+            throw new BadRequestException("Failed to store HTML file: " + e.getMessage(), e);
         }
     }
 
@@ -204,6 +266,77 @@ public class FileStorageService {
         }
 
         log.debug("File validation passed");
+    }
+
+    /**
+     * Validates HTML file size, MIME type, extension, and content.
+     *
+     * @param file the file to validate
+     * @throws BadRequestException if validation fails
+     */
+    private void validateHtmlFile(MultipartFile file) {
+        log.debug("Validating HTML file: size={} bytes, contentType={}", file.getSize(), file.getContentType());
+
+        // Validate file size (10MB max)
+        if (file.getSize() > MAX_HTML_FILE_SIZE_BYTES) {
+            throw new BadRequestException(
+                    String.format("HTML file size exceeds maximum allowed size of 10 MB")
+            );
+        }
+
+        // Validate MIME type
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.equals("text/html")) {
+            throw new BadRequestException("File must be an HTML file (MIME type: text/html)");
+        }
+
+        // Validate extension
+        String extension = getFileExtension(file.getOriginalFilename());
+        if (!extension.equals("html")) {
+            throw new BadRequestException("File must have .html extension");
+        }
+
+        // Validate content (check if file actually contains HTML)
+        validateHtmlContent(file);
+
+        log.debug("HTML file validation passed");
+    }
+
+    /**
+     * Validates that the file content is actually HTML by checking for common HTML tags.
+     * Reads the first 512 bytes to check for HTML indicators without loading the entire file.
+     *
+     * @param file the file to validate
+     * @throws BadRequestException if content validation fails
+     */
+    private void validateHtmlContent(MultipartFile file) {
+        try (InputStream inputStream = file.getInputStream()) {
+            byte[] buffer = new byte[HTML_VALIDATION_BUFFER_SIZE];
+            int bytesRead = inputStream.read(buffer);
+
+            if (bytesRead <= 0) {
+                throw new BadRequestException("HTML file appears to be empty");
+            }
+
+            // Convert to string and check for HTML indicators (case-insensitive)
+            String content = new String(buffer, 0, bytesRead).toLowerCase();
+
+            boolean isValidHtml = HTML_INDICATORS.stream()
+                    .anyMatch(indicator -> content.contains(indicator.toLowerCase()));
+
+            if (!isValidHtml) {
+                log.warn("File does not appear to contain valid HTML content");
+                throw new BadRequestException(
+                        "File does not appear to be a valid HTML file. Expected HTML tags not found."
+                );
+            }
+
+            log.debug("HTML content validation passed");
+
+        } catch (IOException e) {
+            log.error("Failed to validate HTML content", e);
+            throw new BadRequestException("Failed to validate HTML file content: " + e.getMessage(), e);
+        }
     }
 
     /**
