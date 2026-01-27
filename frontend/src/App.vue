@@ -1,7 +1,10 @@
 <template>
-  <component :is="layoutComponent">
-    <router-view />
-  </component>
+  <div>
+    <PendingUserAlert />
+    <component :is="layoutComponent">
+      <router-view />
+    </component>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -9,6 +12,7 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import PublicLayout from '@/layouts/PublicLayout.vue'
 import PrivateLayout from '@/layouts/PrivateLayout.vue'
+import PendingUserAlert from '@/components/user/PendingUserAlert.vue'
 
 const route = useRoute()
 

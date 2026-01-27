@@ -1,98 +1,89 @@
 <template>
-  <div class="institution-selection-page">
-    <v-container fluid class="fill-height">
-      <v-row align="center" justify="center">
-        <v-col cols="12" sm="10" md="8" lg="6" xl="4">
-          <v-card elevation="4" rounded="lg">
-            <v-card-title class="text-h5 text-center pa-6 font-weight-bold">
-              Selecione uma Instituição
-            </v-card-title>
-            <v-divider />
-
-            <v-card-text class="pa-6">
-              <p class="text-body-1 text-center mb-6 text-grey-darken-1">
-                Você está vinculado a múltiplas instituições. Selecione uma para continuar.
-              </p>
-
-              <v-progress-linear
-                v-if="isLoading"
-                indeterminate
-                color="primary"
-                class="mb-4"
-              />
-
-              <v-alert
-                v-if="error"
-                type="error"
-                variant="tonal"
-                closable
-                class="mb-4"
-                @click:close="error = null"
-              >
-                {{ error }}
-              </v-alert>
-
-              <v-list v-if="!isLoading && userInstitutions.length > 0" class="elevation-0">
-                <v-list-item
-                  v-for="userInst in userInstitutions"
-                  :key="userInst.institution.id"
-                  :title="userInst.institution.name"
-                  :subtitle="userInst.institution.acronym"
-                  :prepend-avatar="userInst.institution.logoThumbnailUrl || undefined"
-                  class="mb-2 rounded border"
-                  hover
-                  @click="handleSelect(userInst.institution.id)"
-                >
-                  <template #prepend>
-                    <v-avatar v-if="userInst.institution.logoThumbnailUrl" size="48">
-                      <v-img :src="userInst.institution.logoThumbnailUrl" />
-                    </v-avatar>
-                    <v-avatar v-else color="primary" size="48">
-                      <v-icon color="white">mdi-office-building</v-icon>
-                    </v-avatar>
-                  </template>
-
-                  <template #append>
-                    <v-chip
-                      :color="getTypeColor(userInst.institution.type)"
-                      size="small"
-                      variant="flat"
-                    >
-                      {{ getTypeLabel(userInst.institution.type) }}
-                    </v-chip>
-                    <v-icon>mdi-chevron-right</v-icon>
-                  </template>
-                </v-list-item>
-              </v-list>
-
-              <div v-if="!isLoading && userInstitutions.length === 0" class="text-center py-8">
-                <v-icon icon="mdi-alert-circle-outline" size="64" color="warning" class="mb-2" />
-                <p class="text-body-1 text-grey-darken-1">
-                  Você não está vinculado a nenhuma instituição.
-                </p>
-                <p class="text-body-2 text-grey">
-                  Entre em contato com um administrador para obter acesso.
-                </p>
+  <v-container fluid class="fill-height selection-container">
+    <v-row align="center" justify="center" class="ma-0">
+      <v-col cols="12" sm="10" md="8" lg="6" xl="5" class="pa-3 pa-sm-4">
+        <v-card variant="outlined" class="selection-card pa-4 pa-sm-6">
+          <v-card-text class="pa-0">
+            <!-- Header -->
+            <div class="text-center mb-6 mb-sm-8">
+              <div class="icon-wrapper">
+                <v-icon icon="mdi-office-building" :size="$vuetify.display.xs ? 40 : 48" color="primary" />
               </div>
-            </v-card-text>
+              <h1 class="selection-title mt-4 mt-sm-6 mb-2">
+                Selecione uma Instituição
+              </h1>
+              <p class="selection-subtitle">
+                Você está vinculado a múltiplas instituições. Escolha uma para continuar.
+              </p>
+            </div>
 
-            <v-divider />
+            <!-- Loading -->
+            <v-progress-linear
+              v-if="isLoading"
+              indeterminate
+              color="primary"
+              class="mb-4"
+            />
 
-            <v-card-actions class="pa-4">
-              <v-btn
-                color="error"
-                variant="text"
-                prepend-icon="mdi-logout"
-                @click="handleLogout"
-              >
-                Sair
-              </v-btn>
-            </v-card-actions>
-          </v-card>
-        </v-col>
-      </v-row>
-    </v-container>
-  </div>
+            <!-- Error Alert -->
+            <v-alert
+              v-if="error"
+              type="error"
+              variant="tonal"
+              density="compact"
+              closable
+              class="mb-4"
+              @click:close="error = null"
+            >
+              {{ error }}
+            </v-alert>
+
+            <!-- Institution List -->
+            <div v-if="!isLoading && userInstitutions.length > 0" class="institutions-list">
+              <InstitutionCard
+                v-for="userInst in userInstitutions"
+                :key="userInst.institution.id"
+                :institution="userInst.institution"
+                :roles="userInst.roles"
+                :show-chevron="true"
+                :clickable="true"
+                variant="outlined"
+                class="mb-3"
+                @click="handleSelect"
+              />
+            </div>
+
+            <!-- Empty State -->
+            <div v-if="!isLoading && userInstitutions.length === 0" class="text-center py-12">
+              <v-icon icon="mdi-office-building-outline" size="64" color="grey-lighten-1" class="mb-4" />
+              <p class="text-body-1 font-weight-medium mb-2">
+                Nenhuma instituição vinculada
+              </p>
+              <p class="text-body-2 text-grey-darken-1">
+                Entre em contato com um administrador para obter acesso.
+              </p>
+            </div>
+          </v-card-text>
+
+          <v-divider class="my-4 my-sm-6" />
+
+          <!-- Footer -->
+          <v-card-text class="pa-0">
+            <v-btn
+              color="error"
+              variant="text"
+              prepend-icon="mdi-logout"
+              size="small"
+              class="text-none"
+              @click="handleLogout"
+            >
+              Sair da conta
+            </v-btn>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+  </v-container>
 </template>
 
 <script setup lang="ts">
@@ -100,7 +91,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useInstitution } from '@/composables/useInstitution'
 import { useAuth } from '@/composables/useAuth'
-import { InstitutionType } from '@/types/institution.types'
+import InstitutionCard from '@/components/institution/InstitutionCard.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -132,31 +123,67 @@ function handleLogout(): void {
   logout()
   router.push({ name: 'login' })
 }
-
-function getTypeLabel(type: InstitutionType): string {
-  const labels: Record<InstitutionType, string> = {
-    [InstitutionType.FEDERAL]: 'Federal',
-    [InstitutionType.ESTADUAL]: 'Estadual',
-    [InstitutionType.MUNICIPAL]: 'Municipal',
-    [InstitutionType.PRIVADA]: 'Privada',
-  }
-  return labels[type] || type
-}
-
-function getTypeColor(type: InstitutionType): string {
-  const colors: Record<InstitutionType, string> = {
-    [InstitutionType.FEDERAL]: 'blue',
-    [InstitutionType.ESTADUAL]: 'green',
-    [InstitutionType.MUNICIPAL]: 'orange',
-    [InstitutionType.PRIVADA]: 'purple',
-  }
-  return colors[type] || 'grey'
-}
 </script>
 
-<style scoped>
-.institution-selection-page {
-  min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+<style scoped lang="scss">
+.selection-container {
+  min-height: calc(100vh - 64px);
+  padding: 16px;
+
+  @media (min-width: 600px) {
+    padding: 24px;
+  }
+}
+
+.selection-card {
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+  border-radius: 16px;
+  background: white;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+.icon-wrapper {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: rgba(var(--v-theme-primary), 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+
+  @media (min-width: 600px) {
+    width: 80px;
+    height: 80px;
+    border-radius: 20px;
+  }
+}
+
+.selection-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #0f172a;
+  letter-spacing: -0.5px;
+
+  @media (min-width: 600px) {
+    font-size: 28px;
+  }
+}
+
+.selection-subtitle {
+  font-size: 14px;
+  color: #64748b;
+  font-weight: 400;
+  line-height: 1.5;
+
+  @media (min-width: 600px) {
+    font-size: 15px;
+  }
+}
+
+.institutions-list {
+  width: 100%;
 }
 </style>

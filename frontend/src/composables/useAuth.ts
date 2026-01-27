@@ -17,6 +17,8 @@ export function useAuth() {
   const user = computed(() => authStore.currentUser)
   const isPending = computed(() => authStore.isPending)
   const isAdmin = computed(() => authStore.isAdmin)
+  const isManager = computed(() => authStore.isManager)
+  const canManageUsers = computed(() => authStore.canManageUsers)
 
   return {
     login,
@@ -25,5 +27,7 @@ export function useAuth() {
     user,
     isPending,
     isAdmin,
+    isManager,
+    canManageUsers,
   }
 }

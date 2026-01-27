@@ -32,59 +32,31 @@
       </v-btn>
     </template>
 
-    <v-list min-width="280">
-      <v-list-subheader>Suas Instituições</v-list-subheader>
+    <v-card min-width="360" max-width="420">
+      <v-card-title class="text-subtitle-2 text-medium-emphasis pa-4 pb-2">
+        Minhas Instituições
+      </v-card-title>
 
-      <v-list-item
-        v-for="userInstitution in userInstitutions"
-        :key="userInstitution.institution.id"
-        :active="activeInstitutionId === userInstitution.institution.id"
-        @click="handleSwitchInstitution(userInstitution.institution.id)"
-      >
-        <template #prepend>
-          <v-avatar
-            size="40"
-            color="primary"
-            variant="tonal"
-          >
-            <v-img
-              v-if="userInstitution.institution.logoThumbnailUrl || userInstitution.institution.logoUrl"
-              :src="userInstitution.institution.logoThumbnailUrl || userInstitution.institution.logoUrl"
-              :alt="userInstitution.institution.acronym"
-              cover
-            />
-            <v-icon v-else>mdi-office-building</v-icon>
-          </v-avatar>
-        </template>
-
-        <v-list-item-title class="font-weight-medium">
-          {{ userInstitution.institution.acronym }}
-        </v-list-item-title>
-
-        <v-list-item-subtitle class="text-caption">
-          {{ userInstitution.institution.name }}
-        </v-list-item-subtitle>
-
-        <template #append>
-          <v-chip
-            v-if="activeInstitutionId === userInstitution.institution.id"
-            color="primary"
-            size="x-small"
-            variant="tonal"
-          >
-            Ativa
-          </v-chip>
-        </template>
-      </v-list-item>
-
-      <v-divider v-if="userInstitutions.length === 0" class="my-2" />
-
-      <v-list-item v-if="userInstitutions.length === 0" disabled>
-        <v-list-item-title class="text-medium-emphasis text-center">
+      <v-card-text v-if="userInstitutions.length === 0" class="text-center pa-6">
+        <v-icon icon="mdi-office-building-outline" size="48" color="grey-lighten-1" class="mb-2" />
+        <p class="text-body-2 text-grey-darken-1">
           Nenhuma instituição disponível
-        </v-list-item-title>
-      </v-list-item>
-    </v-list>
+        </p>
+      </v-card-text>
+
+      <v-card-text v-else class="pa-3">
+        <InstitutionCard
+          v-for="userInstitution in userInstitutions"
+          :key="userInstitution.institution.id"
+          :institution="userInstitution.institution"
+          :roles="userInstitution.roles"
+          :is-active="activeInstitutionId === userInstitution.institution.id"
+          :clickable="activeInstitutionId !== userInstitution.institution.id"
+          class="mb-3"
+          @click="handleSwitchInstitution"
+        />
+      </v-card-text>
+    </v-card>
   </v-menu>
 
   <!-- Confirmation Dialog -->
@@ -152,6 +124,7 @@
 import { ref, computed } from 'vue'
 import { useInstitutionStore } from '@/stores/institution.store'
 import type { Institution } from '@/types/institution.types'
+import InstitutionCard from './InstitutionCard.vue'
 
 const institutionStore = useInstitutionStore()
 

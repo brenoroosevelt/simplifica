@@ -11,15 +11,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-
 interface Props {
   to?: string
   iconSize?: number
   subtitle?: string
 }
 
-const props = withDefaults(defineProps<Props>(), {
+withDefaults(defineProps<Props>(), {
   to: '/',
   iconSize: 32,
   subtitle: 'Gestão de Processos'

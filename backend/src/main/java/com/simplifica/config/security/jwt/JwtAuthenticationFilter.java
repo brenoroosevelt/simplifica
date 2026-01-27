@@ -52,7 +52,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (StringUtils.hasText(jwt) && tokenProvider.validateToken(jwt)) {
                 UUID userId = tokenProvider.getUserIdFromToken(jwt);
 
-                User user = userRepository.findById(userId)
+                User user = userRepository.findByIdWithInstitutions(userId)
                         .orElse(null);
                 if (user != null) {
                     UserPrincipal userPrincipal = UserPrincipal.create(user);

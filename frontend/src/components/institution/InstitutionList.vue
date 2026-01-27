@@ -1,7 +1,7 @@
 <template>
   <div class="institution-list">
-    <!-- Filters Section -->
-    <div class="d-flex flex-column flex-md-row align-start align-md-center pa-4" style="gap: 12px;">
+    <!-- Filters Section - Apenas para ADMIN -->
+    <div v-if="showFilters" class="d-flex flex-column flex-md-row align-start align-md-center pa-4" style="gap: 12px;">
       <v-text-field
         v-model="filters.search"
         placeholder="Buscar por nome ou sigla..."
@@ -33,7 +33,7 @@
       />
     </div>
 
-    <v-divider />
+    <v-divider v-if="showFilters" />
 
     <!-- Data Table -->
     <v-data-table-server
@@ -117,6 +117,7 @@
       <!-- Actions Column -->
       <template #item.actions="{ item }">
         <div class="d-flex" style="gap: 4px;">
+          <!-- Editar: disponível para ADMIN e MANAGER -->
           <v-tooltip text="Alterar" location="top">
             <template #activator="{ props: tooltipProps }">
               <v-btn
@@ -129,7 +130,8 @@
             </template>
           </v-tooltip>
 
-          <v-tooltip text="Excluir" location="top">
+          <!-- Excluir: apenas ADMIN -->
+          <v-tooltip v-if="isAdmin" text="Excluir" location="top">
             <template #activator="{ props: tooltipProps }">
               <v-btn
                 v-bind="tooltipProps"
@@ -142,6 +144,7 @@
             </template>
           </v-tooltip>
 
+          <!-- Gerenciar Usuários: redireciona para página de usuários -->
           <v-tooltip text="Gerenciar Usuários" location="top">
             <template #activator="{ props: tooltipProps }">
               <v-btn
@@ -189,7 +192,15 @@ interface Props {
   items: Institution[]
   totalItems: number
   loading?: boolean
+  isAdmin?: boolean
+  showFilters?: boolean
 }
+
+withDefaults(defineProps<Props>(), {
+  loading: false,
+  isAdmin: false,
+  showFilters: true,
+})
 
 interface Emits {
   (event: 'update:filters', filters: Filters): void
@@ -211,15 +222,13 @@ interface Pagination {
   sortBy: Array<{ key: string; order: 'asc' | 'desc' }>
 }
 
-defineProps<Props>()
-
 const emit = defineEmits<Emits>()
 
 // Filters State
 const filters = reactive<Filters>({
   search: '',
   type: null,
-  active: null,
+  active: true, // Por padrão, mostrar apenas instituições ativas
 })
 
 // Pagination State
@@ -270,7 +279,11 @@ const debouncedSearch = () => {
 
 // Emit filter changes
 const emitFilters = () => {
-  emit('update:filters', { ...filters })
+  // Se o filtro active for null, tratar como true (apenas ativas)
+  emit('update:filters', {
+    ...filters,
+    active: filters.active === null ? true : filters.active
+  })
 }
 
 // Emit pagination changes

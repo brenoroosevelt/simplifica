@@ -1,7 +1,6 @@
 package com.simplifica.config.security;
 
 import com.simplifica.domain.entity.User;
-import com.simplifica.domain.entity.UserRole;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -41,14 +40,18 @@ public class UserPrincipal implements UserDetails, OAuth2User {
 
     /**
      * Creates a UserPrincipal from a User entity (for JWT authentication).
+     * Note: User no longer has a global role - roles are managed per institution.
      *
-     * @param user the User entity
+     * For system-level access control:
+     * - If user has ADMIN role in "SIMP-ADMIN" institution, grants ROLE_ADMIN
+     * - If user has ADMIN role in any institution, grants ROLE_MANAGER
+     * - Otherwise, grants ROLE_USER
+     *
+     * @param user the User entity with institutions loaded
      * @return a UserPrincipal instance
      */
     public static UserPrincipal create(User user) {
-        Collection<GrantedAuthority> authorities = Collections.singletonList(
-                new SimpleGrantedAuthority("ROLE_" + user.getRole().name())
-        );
+        Collection<GrantedAuthority> authorities = determineAuthorities(user);
 
         return new UserPrincipal(
                 user.getId(),
@@ -59,6 +62,46 @@ public class UserPrincipal implements UserDetails, OAuth2User {
                 Collections.emptyMap(),
                 null // currentInstitutionId set later by interceptor
         );
+    }
+
+    /**
+     * Determines authorities based on user's institution roles.
+     *
+     * Rules:
+     * - ADMIN in "SIMP-ADMIN" institution = ROLE_ADMIN (system administrator)
+     * - MANAGER in any institution = ROLE_MANAGER (gestor)
+     * - Otherwise = ROLE_USER (regular user)
+     *
+     * @param user the User entity
+     * @return collection of authorities
+     */
+    private static Collection<GrantedAuthority> determineAuthorities(User user) {
+        if (user.getInstitutions() == null || user.getInstitutions().isEmpty()) {
+            return Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"));
+        }
+
+        // Check if user has ADMIN role in SIMP-ADMIN institution
+        boolean isSystemAdmin = user.getInstitutions().stream()
+                .filter(ui -> ui.getActive())
+                .filter(ui -> "SIMP-ADMIN".equals(ui.getInstitution().getAcronym()))
+                .anyMatch(ui -> ui.getRoles().stream()
+                        .anyMatch(role -> "ADMIN".equals(role.name())));
+
+        if (isSystemAdmin) {
+            return Collections.singletonList(new SimpleGrantedAuthority("ROLE_ADMIN"));
+        }
+
+        // Check if user has MANAGER role in any institution (makes them a GESTOR)
+        boolean isInstitutionManager = user.getInstitutions().stream()
+                .filter(ui -> ui.getActive())
+                .anyMatch(ui -> ui.getRoles().stream()
+                        .anyMatch(role -> "MANAGER".equals(role.name())));
+
+        if (isInstitutionManager) {
+            return Collections.singletonList(new SimpleGrantedAuthority("ROLE_MANAGER"));
+        }
+
+        return Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"));
     }
 
     /**
@@ -126,12 +169,23 @@ public class UserPrincipal implements UserDetails, OAuth2User {
     }
 
     /**
-     * Checks if the user has admin role.
+     * Checks if the user has system admin role.
+     * System admin is determined by having ADMIN role in the "SIMP-ADMIN" institution.
      *
-     * @return true if the user has ROLE_ADMIN authority
+     * @return true if the user has ROLE_ADMIN authority (system administrator)
      */
     public boolean isAdmin() {
         return authorities.stream()
-                .anyMatch(auth -> auth.getAuthority().equals("ROLE_" + UserRole.ADMIN.name()));
+                .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
+    }
+
+    /**
+     * Gets the current active institution ID from the TenantContext.
+     * The institution ID is set by the TenantInterceptor based on the X-Institution-Id header.
+     *
+     * @return the current active institution ID, or null if not set
+     */
+    public UUID getCurrentInstitutionId() {
+        return com.simplifica.config.tenant.TenantContext.getCurrentInstitution();
     }
 }

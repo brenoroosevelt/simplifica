@@ -8,8 +8,8 @@
     <!-- Botão menu (apenas no contexto privado) -->
     <v-app-bar-nav-icon
       v-if="showMenu"
-      @click="toggleDrawer"
       class="ml-2"
+      @click="toggleDrawer"
     />
 
     <!-- Logo/Brand -->

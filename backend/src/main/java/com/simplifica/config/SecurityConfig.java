@@ -91,9 +91,10 @@ public class SecurityConfig {
                         .requestMatchers("/oauth2/**").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
 
-                        // Admin endpoints
-                        .requestMatchers("/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/institutions/**").hasRole("ADMIN")
+                        // Admin and institution endpoints use @PreAuthorize at controller level
+                        // to handle both ADMIN and MANAGER roles with fine-grained control
+                        .requestMatchers("/admin/**").authenticated()
+                        .requestMatchers("/institutions/**").authenticated()
 
                         // Protected endpoints
                         .requestMatchers("/auth/**").authenticated()

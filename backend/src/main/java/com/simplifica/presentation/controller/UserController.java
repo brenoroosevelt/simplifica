@@ -2,6 +2,7 @@ package com.simplifica.presentation.controller;
 
 import com.simplifica.application.dto.InstitutionDTO;
 import com.simplifica.application.dto.UserDTO;
+import com.simplifica.application.dto.UserInstitutionDTO;
 import com.simplifica.application.service.UserInstitutionService;
 import com.simplifica.application.service.UserService;
 import com.simplifica.config.security.UserPrincipal;
@@ -52,15 +53,18 @@ public class UserController {
     /**
      * Returns all institutions that the currently authenticated user is linked to.
      *
+     * Includes complete user-institution relationship data with roles, active status,
+     * and link metadata.
+     *
      * @param userPrincipal the authenticated user principal
-     * @return list of institutions the user belongs to
+     * @return list of user-institution relationships
      */
     @GetMapping("/institutions")
-    public ResponseEntity<List<InstitutionDTO>> getUserInstitutions(
+    public ResponseEntity<List<UserInstitutionDTO>> getUserInstitutions(
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
         List<UserInstitution> userInstitutions = userInstitutionService.getUserInstitutions(userPrincipal.getId());
-        List<InstitutionDTO> institutions = userInstitutions.stream()
-                .map(ui -> InstitutionDTO.fromEntity(ui.getInstitution()))
+        List<UserInstitutionDTO> institutions = userInstitutions.stream()
+                .map(UserInstitutionDTO::fromEntitySimplified)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(institutions);
     }

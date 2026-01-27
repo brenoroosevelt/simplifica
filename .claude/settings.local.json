@@ -30,7 +30,18 @@
       "Bash(bash:*)",
       "Bash(docker-compose:*)",
       "Bash(wc:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(psql:*)",
+      "Bash(npx eslint:*)",
+      "Bash(npm run type-check:*)",
+      "Bash(npm run)",
+      "Bash(./mvnw clean compile:*)",
+      "Bash(npm run lint:*)",
+      "Bash(mvn compile:*)",
+      "Bash(./mvnw test:*)",
+      "Bash(xargs:*)",
+      "Bash(npx vue-tsc:*)",
+      "Bash(./mvnw clean test:*)"
     ]
   }
 }

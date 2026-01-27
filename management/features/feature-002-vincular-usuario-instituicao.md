@@ -1,10 +1,25 @@
-# Feature 001 - OAuth Login
+# Feature 001 - Vincular usuário a instituição
 
 ## Contexto
-Usuários precisam autenticar no sistema usando contas Google e Microsoft, sem criar senha local.
+Usuários logan no app via provedor (google, microsoft, etc), o usuário fica pendente até que um administrador o vincule a uma instituição.
+
 
 ## Objetivo
-Permitir login seguro e rápido usando OAuth2, criando usuário automaticamente no primeiro acesso.
+Os papeis são: USUARIO, GESTOR e ADMIN.
+Permitir que o ADMIN vincule o usuário a uma ou mais instituições.
+ - Deste vínculo de usuário com instituição, temos os papeis associados que vão determinar o perfil do usuário na insituição.
+ - Uma instituição chamada Administração Simplifica deve existir com id 1 (migrations) e apenas os usuários desta instituição poderão ser admin.
+
+Listar os usuários cadastrados, permitindo filtrar pos status pendente, instituição, papel/perfil, nome, email.
+Permitir também que este vínculo seja modificado, mas somente admin podem alterar a instituição.
+Permitir que além do vínculo com insituição (apenas admin), os papeis seja modificados e outras informação não críticas vindas do proivedor de acesso (para esta alteração GESTOR também pode realizar)
+Gestores só podem ver usuários de sua instituição (portanto o filtro de insituição não precisa existir para GESTOR)
+Admin podem ver todos os usuários.
+A tela de intituições tem um botão para usuários vinculados que pode ser removido.
+Status de usuário: pendente, ativo e inativo.
+Pepeis: Usuário, Gestor, Admin.
+Usuário pode alternar a instituição de trabalho selecionada (no header ou na tela de user profile)
+O vínculo com uma instituição deve acontecer de forma automática se o dominio do email for o mesmo da instituição e o papel neste caso é USUARIO apenas.
 
 ## Usuários impactados
 - Usuários finais do sistema web
@@ -17,12 +32,11 @@ Inclui:
 - Login via Microsoft
 - Persistência do usuário no banco
 - Tela de login e callback no frontend
-- Profile do usuário
+- Profile do usuário alterado para mostras as instituições vinculadas e os papeis associados neste vínculo.
 - O vínculo de um usuário com uma instituição deve poder escolher um ou vários papeis
-- Capacidade de plugar outros serviços de login como Facebook
 - Atribuir perfil ao usuário (somente admin, ou gestor pode)
 - Frontend deve validar as rotas e telas usando os perfis (roles do usuário)
-- endpoint da api deve validar roles
+- endpoint no backend da api deve validar roles e instituição selecionada
 
 Não inclui:
 - Login com email/senha

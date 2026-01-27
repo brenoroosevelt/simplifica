@@ -26,7 +26,7 @@
           accept="image/*"
           hidden
           @change="handleFileChange"
-        />
+        >
 
         <div class="d-flex justify-center" style="gap: 8px;">
           <v-btn
@@ -92,28 +92,32 @@
         />
       </v-col>
 
-      <!-- Active Field -->
+      <!-- Active Field - Apenas ADMIN pode alterar -->
       <v-col cols="12" md="6">
         <v-select
           v-model="formData.active"
           label="Status *"
           :items="statusOptions"
           :rules="[rules.required]"
+          :disabled="!isAdmin"
+          :hint="!isAdmin ? 'Apenas administradores podem alterar o status' : ''"
+          persistent-hint
           prepend-inner-icon="mdi-check-circle"
           required
         />
       </v-col>
 
-      <!-- Domain Field -->
+      <!-- Domain Field - Apenas ADMIN pode alterar -->
       <v-col cols="12">
         <v-text-field
           v-model="formData.domain"
           label="Domínio (opcional)"
           placeholder="Ex: ufms.br"
           :rules="[rules.domain]"
-          prepend-inner-icon="mdi-web"
-          hint="Domínio de e-mail para vinculação automática futura"
+          :disabled="!isAdmin"
+          :hint="!isAdmin ? 'Apenas administradores podem alterar o domínio' : 'Domínio de e-mail para vinculação automática futura'"
           persistent-hint
+          prepend-inner-icon="mdi-web"
         />
       </v-col>
 
@@ -149,6 +153,7 @@ import type { Institution, InstitutionCreateRequest, InstitutionUpdateRequest } 
 interface Props {
   institution?: Institution
   loading?: boolean
+  isAdmin?: boolean
 }
 
 interface Emits {
@@ -159,6 +164,7 @@ interface Emits {
 const props = withDefaults(defineProps<Props>(), {
   institution: undefined,
   loading: false,
+  isAdmin: true, // Default true para não quebrar funcionalidade existente
 })
 
 const emit = defineEmits<Emits>()

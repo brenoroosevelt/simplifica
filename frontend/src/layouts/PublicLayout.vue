@@ -1,8 +1,8 @@
 <template>
   <v-app>
     <AppHeader
-      variant="public"
       v-model:drawer="drawer"
+      variant="public"
       :menu-items="menuItems"
       :on-scroll-to-section="scrollToSection"
       :on-demo-click="handleDemoClick"

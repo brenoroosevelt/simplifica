@@ -3,7 +3,6 @@ package com.simplifica.unit.service;
 import com.simplifica.application.service.UserService;
 import com.simplifica.domain.entity.OAuth2Provider;
 import com.simplifica.domain.entity.User;
-import com.simplifica.domain.entity.UserRole;
 import com.simplifica.domain.entity.UserStatus;
 import com.simplifica.infrastructure.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,7 +44,6 @@ class UserServiceTest {
                 .name("Test User")
                 .provider(OAuth2Provider.GOOGLE)
                 .providerId("google-123")
-                .role(UserRole.USER)
                 .status(UserStatus.ACTIVE)
                 .build();
     }

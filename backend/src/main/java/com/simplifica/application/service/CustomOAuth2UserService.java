@@ -3,9 +3,14 @@ package com.simplifica.application.service;
 import com.simplifica.config.security.UserPrincipal;
 import com.simplifica.config.security.oauth.OAuth2UserInfo;
 import com.simplifica.config.security.oauth.OAuth2UserInfoFactory;
+import com.simplifica.domain.entity.Institution;
+import com.simplifica.domain.entity.InstitutionRole;
 import com.simplifica.domain.entity.OAuth2Provider;
 import com.simplifica.domain.entity.User;
+import com.simplifica.domain.entity.UserInstitution;
 import com.simplifica.domain.entity.UserStatus;
+import com.simplifica.infrastructure.repository.InstitutionRepository;
+import com.simplifica.infrastructure.repository.UserInstitutionRepository;
 import com.simplifica.infrastructure.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Custom OAuth2 User Service for processing OAuth2 authentication.
@@ -36,6 +42,15 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private InstitutionRepository institutionRepository;
+
+    @Autowired
+    private UserInstitutionRepository userInstitutionRepository;
+
+    @Autowired
+    private AuditService auditService;
 
     @Override
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
@@ -80,29 +95,120 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             user = createNewUser(provider, oauth2UserInfo);
         }
 
+        // Reload user with institutions to determine authorities
+        user = userRepository.findByIdWithInstitutions(user.getId())
+                .orElse(user);
+
         return UserPrincipal.create(user, oauth2User.getAttributes());
     }
 
     /**
      * Creates a new user from OAuth2 provider information.
+     * Attempts to auto-link user to institution by email domain.
      *
      * @param provider the OAuth2 provider
      * @param userInfo the user information from the provider
      * @return the newly created user
      */
     private User createNewUser(OAuth2Provider provider, OAuth2UserInfo userInfo) {
+        String email = userInfo.getEmail();
+        String domain = extractDomain(email);
+
         User user = User.builder()
-                .email(userInfo.getEmail())
+                .email(email)
                 .name(userInfo.getName())
                 .pictureUrl(userInfo.getImageUrl())
                 .provider(provider)
                 .providerId(userInfo.getId())
-                .status(UserStatus.PENDING) // New users start as PENDING
+                .status(UserStatus.PENDING) // Start as PENDING, may change to ACTIVE if auto-linked
                 .build();
 
         User savedUser = userRepository.save(user);
         LOGGER.info("Created new user: {} from provider: {}", savedUser.getEmail(), provider);
+
+        // Attempt auto-link by email domain
+        autoLinkUserByDomain(savedUser, domain);
+
         return savedUser;
+    }
+
+    /**
+     * Extracts the domain from an email address.
+     *
+     * @param email the email address
+     * @return the domain (e.g., "ufms.br" from "usuario@ufms.br")
+     */
+    private String extractDomain(String email) {
+        if (email == null || !email.contains("@")) {
+            return null;
+        }
+        return email.substring(email.indexOf("@") + 1).toLowerCase();
+    }
+
+    /**
+     * Attempts to automatically link a user to an institution by email domain.
+     * If a matching institution is found:
+     * - Creates user-institution link with VIEWER role
+     * - Changes user status from PENDING to ACTIVE
+     * - Logs audit trail
+     *
+     * @param user the user to link
+     * @param domain the email domain
+     */
+    private void autoLinkUserByDomain(User user, String domain) {
+        if (domain == null) {
+            LOGGER.debug("No domain extracted for user: {}", user.getEmail());
+            return;
+        }
+
+        Optional<Institution> institutionOpt = institutionRepository.findByDomain(domain);
+
+        if (institutionOpt.isEmpty()) {
+            LOGGER.info("No institution found for domain: {}. User {} remains PENDING.",
+                       domain, user.getEmail());
+            return;
+        }
+
+        Institution institution = institutionOpt.get();
+
+        if (!institution.isActive()) {
+            LOGGER.warn("Institution {} is inactive. User {} remains PENDING.",
+                       institution.getName(), user.getEmail());
+            return;
+        }
+
+        try {
+            // Create user-institution link with VIEWER role
+            UserInstitution userInstitution = UserInstitution.builder()
+                    .user(user)
+                    .institution(institution)
+                    .roles(Set.of(InstitutionRole.VIEWER))
+                    .active(true)
+                    .build();
+
+            userInstitutionRepository.save(userInstitution);
+
+            // Change user status to ACTIVE
+            user.setStatus(UserStatus.ACTIVE);
+            userRepository.save(user);
+
+            LOGGER.info("User {} auto-linked to institution {} via domain {} with VIEWER role",
+                       user.getEmail(), institution.getName(), domain);
+
+            // Log audit trail
+            auditService.logUserAutoLinkedByDomain(
+                    user,
+                    institution.getId(),
+                    institution.getName(),
+                    domain,
+                    Set.of(InstitutionRole.VIEWER)
+            );
+
+        } catch (Exception e) {
+            LOGGER.error("Failed to auto-link user {} to institution {} via domain {}",
+                        user.getEmail(), institution.getName(), domain, e);
+            // Keep user as PENDING if auto-link fails
+        }
     }
 
     /**

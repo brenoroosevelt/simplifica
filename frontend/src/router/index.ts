@@ -37,6 +37,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       layout: 'private',
       requiresAuth: true,
+      requiresInstitution: true,
     },
   },
   {
@@ -66,7 +67,7 @@ const routes: RouteRecordRaw[] = [
       layout: 'private',
       requiresAuth: true,
       requiresInstitution: true,
-      requiresAdmin: true,
+      requiresUserManagement: true, // ADMIN ou MANAGER
     },
   },
   {
@@ -77,7 +78,29 @@ const routes: RouteRecordRaw[] = [
       layout: 'private',
       requiresAuth: true,
       requiresInstitution: true,
-      requiresAdmin: true,
+      requiresUserManagement: true, // ADMIN ou MANAGER podem acessar
+    },
+  },
+  {
+    path: '/value-chains',
+    name: 'value-chains',
+    component: () => import('@/views/private/ValueChainsPage.vue'),
+    meta: {
+      layout: 'private',
+      requiresAuth: true,
+      requiresInstitution: true,
+      requiresUserManagement: true, // ADMIN ou MANAGER
+    },
+  },
+  {
+    path: '/units',
+    name: 'units',
+    component: () => import('@/views/private/UnitsPage.vue'),
+    meta: {
+      layout: 'private',
+      requiresAuth: true,
+      requiresInstitution: true,
+      requiresUserManagement: true, // ADMIN ou MANAGER
     },
   },
   {
@@ -96,7 +119,7 @@ const routes: RouteRecordRaw[] = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
-  scrollBehavior(to, from, savedPosition) {
+  scrollBehavior(to, _from, savedPosition) {
     // Se há uma posição salva (botão voltar), use-a
     if (savedPosition) {
       return savedPosition

@@ -19,8 +19,16 @@
 
     <!-- Minhas Instituições -->
     <v-card variant="flat" border class="mb-6">
-      <v-card-title class="font-weight-medium">
-        Minhas Instituições
+      <v-card-title class="d-flex align-center justify-space-between pa-4">
+        <span class="font-weight-medium">Minhas Instituições</span>
+        <v-chip
+          v-if="userInstitutions.length > 1"
+          size="small"
+          variant="tonal"
+          prepend-icon="mdi-information-outline"
+        >
+          Clique para trocar
+        </v-chip>
       </v-card-title>
       <v-divider />
       <v-card-text class="pa-4">
@@ -32,47 +40,13 @@
             sm="6"
             md="4"
           >
-            <v-card
-              variant="outlined"
-              :class="{ 'border-primary': userInst.institution.id === activeInstitutionId }"
-              hover
-            >
-              <v-card-text class="pa-4">
-                <div class="d-flex align-center">
-                  <v-avatar
-                    size="48"
-                    :color="userInst.institution.logoThumbnailUrl ? 'transparent' : 'primary'"
-                    variant="tonal"
-                    class="mr-3"
-                  >
-                    <v-img
-                      v-if="userInst.institution.logoThumbnailUrl || userInst.institution.logoUrl"
-                      :src="userInst.institution.logoThumbnailUrl || userInst.institution.logoUrl"
-                      :alt="userInst.institution.acronym"
-                      cover
-                    />
-                    <v-icon v-else>mdi-office-building</v-icon>
-                  </v-avatar>
-                  <div class="flex-grow-1">
-                    <div class="text-body-2 font-weight-medium mb-1">
-                      {{ userInst.institution.acronym }}
-                    </div>
-                    <div class="text-caption text-grey-darken-1">
-                      {{ userInst.institution.name }}
-                    </div>
-                    <v-chip
-                      v-if="userInst.institution.id === activeInstitutionId"
-                      color="primary"
-                      size="x-small"
-                      variant="tonal"
-                      class="mt-1"
-                    >
-                      Ativa
-                    </v-chip>
-                  </div>
-                </div>
-              </v-card-text>
-            </v-card>
+            <InstitutionCard
+              :institution="userInst.institution"
+              :roles="userInst.roles"
+              :is-active="userInst.institution.id === activeInstitutionId"
+              :clickable="userInst.institution.id !== activeInstitutionId"
+              @click="handleSelectInstitution"
+            />
           </v-col>
         </v-row>
         <div v-else class="text-center py-4 text-grey-darken-1">
@@ -147,8 +121,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import PageHeader from '@/components/common/PageHeader.vue'
+import InstitutionCard from '@/components/institution/InstitutionCard.vue'
 import { useAuth } from '@/composables/useAuth'
 import { useInstitutionStore } from '@/stores/institution.store'
 
@@ -163,6 +138,21 @@ const userName = computed(() => {
 
 const userInstitutions = computed(() => institutionStore.userInstitutions)
 const activeInstitutionId = computed(() => institutionStore.activeInstitutionId)
+
+const switching = ref(false)
+
+async function handleSelectInstitution(institutionId: string): Promise<void> {
+  if (institutionId === activeInstitutionId.value || switching.value) return
+
+  switching.value = true
+  try {
+    await institutionStore.selectInstitution(institutionId)
+    window.location.reload()
+  } catch (error) {
+    console.error('Failed to switch institution:', error)
+    switching.value = false
+  }
+}
 
 const statsCards = [
   {

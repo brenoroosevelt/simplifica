@@ -28,8 +28,9 @@ import java.util.stream.Collectors;
  * User entity representing a user account in the system.
  *
  * Users authenticate via OAuth2 providers (Google, Microsoft) and their
- * data is synchronized from the provider. Each user has a role (USER/ADMIN)
- * and status (PENDING/ACTIVE/INACTIVE) that controls their access.
+ * data is synchronized from the provider. Each user has a status
+ * (PENDING/ACTIVE/INACTIVE) that controls their access. Roles are managed
+ * per institution through user_institution_roles.
  */
 @Entity
 @Table(name = "users")
@@ -59,11 +60,6 @@ public class User {
 
     @Column(name = "provider_id", nullable = false, length = 255)
     private String providerId;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 50)
-    @Builder.Default
-    private UserRole role = UserRole.USER;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
@@ -113,15 +109,6 @@ public class User {
      */
     public boolean isActive() {
         return this.status == UserStatus.ACTIVE;
-    }
-
-    /**
-     * Checks if the user has ADMIN role.
-     *
-     * @return true if role is ADMIN, false otherwise
-     */
-    public boolean isAdmin() {
-        return this.role == UserRole.ADMIN;
     }
 
     /**

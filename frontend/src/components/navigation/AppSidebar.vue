@@ -12,11 +12,11 @@
         class="mb-1"
       />
 
-      <template v-if="isAdmin">
+      <template v-if="canManageUsers || isAdmin">
         <v-divider class="my-4" />
 
         <v-list-subheader class="text-caption text-uppercase font-weight-bold">
-          Administração
+          {{ isAdmin ? 'Administração' : 'Gestão' }}
         </v-list-subheader>
 
         <v-list-item
@@ -44,7 +44,7 @@
 import { computed } from 'vue'
 import { useAuth } from '@/composables/useAuth'
 
-const { isAdmin } = useAuth()
+const { isAdmin, canManageUsers } = useAuth()
 
 const menuItems = [
   {
@@ -60,25 +60,54 @@ const menuItems = [
 ]
 
 const adminItems = computed(() => {
-  if (!isAdmin.value) return []
+  const items = []
 
-  return [
-    {
-      title: 'Instituições',
-      icon: 'mdi-office-building',
-      to: '/admin/institutions',
-    },
-    {
+  // Usuários: disponível para ADMIN e MANAGER
+  if (canManageUsers.value) {
+    items.push({
       title: 'Usuários',
       icon: 'mdi-account-group',
       to: '/admin/users',
-    },
-    {
+    })
+  }
+
+  // Instituição/Instituições: disponível para ADMIN e MANAGER
+  if (canManageUsers.value) {
+    items.push({
+      title: isAdmin.value ? 'Instituições' : 'Instituição',
+      icon: 'mdi-office-building',
+      to: '/admin/institutions',
+    })
+  }
+
+  // Cadeias de Valor: disponível para ADMIN e MANAGER
+  if (canManageUsers.value) {
+    items.push({
+      title: 'Cadeias de Valor',
+      icon: 'mdi-chart-timeline-variant',
+      to: '/value-chains',
+    })
+  }
+
+  // Unidades: disponível para ADMIN e MANAGER
+  if (canManageUsers.value) {
+    items.push({
+      title: 'Unidades',
+      icon: 'mdi-office-building-outline',
+      to: '/units',
+    })
+  }
+
+  // Configurações: apenas para ADMIN
+  if (isAdmin.value) {
+    items.push({
       title: 'Configurações',
       icon: 'mdi-cog',
       to: '/admin/settings',
-    },
-  ]
+    })
+  }
+
+  return items
 })
 </script>
 

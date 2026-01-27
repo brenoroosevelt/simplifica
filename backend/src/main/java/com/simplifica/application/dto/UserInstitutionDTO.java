@@ -24,6 +24,8 @@ import java.util.UUID;
 public class UserInstitutionDTO {
 
     private UUID id;
+    private UUID userId;
+    private UUID institutionId;
     private UserDTO user;
     private InstitutionDTO institution;
     private Set<InstitutionRole> roles;
@@ -45,6 +47,8 @@ public class UserInstitutionDTO {
 
         return UserInstitutionDTO.builder()
                 .id(userInstitution.getId())
+                .userId(userInstitution.getUser() != null ? userInstitution.getUser().getId() : null)
+                .institutionId(userInstitution.getInstitution() != null ? userInstitution.getInstitution().getId() : null)
                 .user(UserDTO.fromEntity(userInstitution.getUser()))
                 .institution(InstitutionDTO.fromEntity(userInstitution.getInstitution()))
                 .roles(userInstitution.getRoles())
@@ -73,6 +77,8 @@ public class UserInstitutionDTO {
 
         return UserInstitutionDTO.builder()
                 .id(userInstitution.getId())
+                .userId(userInstitution.getUser() != null ? userInstitution.getUser().getId() : null)
+                .institutionId(userInstitution.getInstitution() != null ? userInstitution.getInstitution().getId() : null)
                 .institution(InstitutionDTO.fromEntity(userInstitution.getInstitution()))
                 .roles(userInstitution.getRoles())
                 .active(userInstitution.getActive())

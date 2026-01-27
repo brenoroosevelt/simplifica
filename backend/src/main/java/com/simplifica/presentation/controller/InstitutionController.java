@@ -116,7 +116,7 @@ public class InstitutionController {
                 .active(active)
                 .build();
 
-        Institution institution = institutionService.create(dto);
+        Institution institution = institutionService.create(dto, logo);
         return ResponseEntity.status(HttpStatus.CREATED).body(InstitutionDTO.fromEntity(institution));
     }
 
@@ -148,7 +148,7 @@ public class InstitutionController {
                 .active(active)
                 .build();
 
-        Institution institution = institutionService.update(id, dto);
+        Institution institution = institutionService.update(id, dto, logo);
         return ResponseEntity.ok(InstitutionDTO.fromEntity(institution));
     }
 

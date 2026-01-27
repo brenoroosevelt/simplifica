@@ -17,4 +17,4 @@ Em seguida, para cada trilha inicie um agente de codificação "coder" para impl
 Assim que o agente "coder" concluir seu trabalho, você precisará entregar a solução ao agente de revisão de código e,
 em seguida, deixar que o agente de revisão de código "code-reviewer" forneça feedback ao agente "coder". Este ciclo 
 deve continuar até que todas as alterações tenham sido implementadas, as tarefas marcadas como prontas e revisadas, 
-e os critérios de aceite atendidos. Ajuste o backlog e os status ao final do processo.
+e os critérios de aceite atendidos. Ajuste o backlog e os status ao final do processo. Importante manter os padrões arquitetural existente no projeto.

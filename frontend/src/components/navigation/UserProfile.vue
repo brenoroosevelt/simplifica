@@ -26,10 +26,6 @@
             <div class="text-caption text-grey">{{ user?.email }}</div>
           </div>
         </div>
-
-        <v-chip v-if="user?.role === 'ADMIN'" color="primary" size="small" class="mt-2">
-          Administrador
-        </v-chip>
       </v-card-text>
 
       <v-divider />

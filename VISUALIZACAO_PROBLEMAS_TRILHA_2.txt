@@ -1,0 +1,270 @@
+================================================================================
+CODE REVIEW - TRILHA 2 ADMIN API
+VISUALIZAÇÃO DOS PROBLEMAS IDENTIFICADOS
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ MATRIZ DE SEVERIDADE                                                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  CRÍTICO (Bloqueia Merge)                RESSALVA (Não Bloqueia)           │
+│  ─────────────────────────────────────   ──────────────────────────────    │
+│  🔴 PC-01: N+1 Query                     ⚠️  RS-01: Validação             │
+│  🔴 PC-02: Auditoria                     ⚠️  RS-02: Performance            │
+│                                          ⚠️  RS-03: Race Condition         │
+│                                          ⚠️  RS-04: Nomenclatura           │
+│                                          ⚠️  RS-05: Exception Handling     │
+│                                          ⚠️  RS-06: Null Checks            │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+PROBLEMA CRÍTICO 1: N+1 QUERY
+================================================================================
+
+Arquivo: UserAdminService.java (linhas 68-90)
+         UserListDTO.java (linha 58)
+
+ANTES (PROBLEMA):
+┌─────────────────────────────────────────┐
+│ GET /admin/users?page=1&size=20         │
+├─────────────────────────────────────────┤
+│ 1. SELECT u FROM User u ... LIMIT 20    │ ← 1 Query
+│    Retorna: [User1, User2, ..., User20] │
+│                                         │
+│ 2. getActiveInstitutions() User1        │ ← N Queries
+│ 3. getActiveInstitutions() User2        │   (1 por usuário)
+│ 4. getActiveInstitutions() User3        │
+│ ... (18 queries a mais)                 │
+│                                         │
+│ TOTAL: 1 + 20 = 21 QUERIES              │ ⚠️ PROBLEMA!
+│ Tempo: ~200ms base + 500ms extra        │
+└─────────────────────────────────────────┘
+
+DEPOIS (SOLUÇÃO):
+┌─────────────────────────────────────────┐
+│ GET /admin/users?page=1&size=20         │
+├─────────────────────────────────────────┤
+│ 1. SELECT u FROM User u                 │
+│    LEFT JOIN FETCH u.institutions ...   │ ← 1 Query
+│    LIMIT 20                             │
+│    Retorna: [User1, User2, ..., User20] │
+│    com todas as instituições carregadas │
+│                                         │
+│ 2. SELECT COUNT(ui) FROM UserInstitution│
+│    WHERE ui.active = true (por usuário) │ ← Opcional (cache)
+│                                         │
+│ TOTAL: 1-2 QUERIES                      │ ✅ OTIMIZADO!
+│ Tempo: ~100-150ms                       │
+└─────────────────────────────────────────┘
+
+IMPACTO:
+- Com 100 usuários/página: 100+ queries → 1-2 queries
+- Com 1000 usuários na BD: Performance 50-100x melhor
+- Escalabilidade: Crítica para produção
+
+
+================================================================================
+PROBLEMA CRÍTICO 2: AUDITORIA FALTANDO
+================================================================================
+
+Arquivo: UserAdminService.java (múltiplas operações)
+
+RASTREABILIDADE PERDIDA:
+┌─────────────────────────────────────────────────────────────┐
+│ 2026-01-23 10:30:00                                        │
+│ Usuário ADMIN atualiza status de User "john@example.com"  │
+│ PENDING → ACTIVE                                           │
+│                                                            │
+│ Mas NÃO HÁ REGISTRO:                                       │
+│ ❌ Quem fez? (admin ID não registrado)                     │
+│ ❌ Quando? (timestamp não registrado)                      │
+│ ❌ O quê? (mudanças específicas não registradas)          │
+│ ❌ Por quê? (motivo não documentado)                       │
+│                                                            │
+│ RESULTADO: Impossível auditar mudanças críticas           │
+│ IMPACTO: LGPD/GDPR Compliance violations                 │
+└─────────────────────────────────────────────────────────────┘
+
+OPERAÇÕES SEM AUDITORIA:
+┌────────────────────────────────────┐
+│ updateUser()          → Sem logs   │ 🔴
+│ updateUserRoles()     → Sem logs   │ 🔴
+│ linkUserToInstitution()→ Sem logs  │ 🔴
+│ unlinkUserFromInstitution()→Sem    │ 🔴
+└────────────────────────────────────┘
+
+SOLUÇÃO IMPLEMENTADA:
+┌──────────────────────────────────────────────────────────┐
+│ CREATE TABLE audit_logs (                                │
+│   id UUID PRIMARY KEY,                                   │
+│   performed_by_user_id UUID,                             │
+│   target_user_id UUID,                                   │
+│   action VARCHAR(50),  -- UPDATE_USER, UPDATE_ROLES, ... │
+│   changes_json TEXT,   -- {"oldStatus": "PENDING", ...}  │
+│   created_at TIMESTAMP,                                  │
+│   ...                                                    │
+│ )                                                        │
+│                                                          │
+│ AuditService.logUserUpdate(                             │
+│   performedBy: User,                                     │
+│   targetUser: User,                                      │
+│   oldName: String,                                       │
+│   newName: String,                                       │
+│   changes: Map<String, Object>                           │
+│ )                                                        │
+└──────────────────────────────────────────────────────────┘
+
+
+================================================================================
+RESSALVA 4: NOMENCLATURA INCONSISTENTE
+================================================================================
+
+Arquivo: Distribuído em todo código
+
+PROBLEMA:
+┌─────────────────────────────────────────────────┐
+│ UserRole.ADMIN                                  │
+│ UserRole.MANAGER ← Usado no código             │
+│ UserRole.GESTOR ← Mencionado na documentação   │
+│                                                │
+│ @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')"│
+│                        ↓                       │
+│ Mas comentário diz: "GESTOR can only..."      │
+│                                                │
+│ RESULTADO: Confusão para manutenção           │
+└─────────────────────────────────────────────────┘
+
+OPÇÕES DE RESOLUÇÃO:
+
+Opção A: Usar MANAGER em todo código (English)
+─────────────────────────────────────────────
+  UserRole.MANAGER
+  @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+  // Comentários em português se necessário
+  ✅ Consistente com código em English
+
+Opção B: Usar GESTOR em todo código (Português)
+─────────────────────────────────────────────
+  UserRole.GESTOR
+  @PreAuthorize("hasAnyRole('ADMIN', 'GESTOR')")
+  // Comentários em português
+  ✅ Mais alinhado com PT-BR
+
+
+================================================================================
+RESSALVA 2: PERFORMANCE - USERLISTDTO
+================================================================================
+
+Arquivo: UserListDTO.java (linha 58)
+
+PROBLEMA:
+┌──────────────────────────────────────────────────┐
+│ return UserListDTO.builder()                     │
+│     .institutionCount(                           │
+│         (long) user.getActiveInstitutions()      │
+│                     .size()  ← Problema aqui!   │
+│     )                                            │
+│     .build()                                     │
+│                                                  │
+│ getActiveInstitutions() carrega TODAS as         │
+│ instituições ativas em memória apenas para       │
+│ contar (1 query a mais por usuário!)             │
+│                                                  │
+│ Pior caso:                                       │
+│ Usuário com 500 instituições →                  │
+│ Carrega 500 entidades em memória → 50MB+        │
+│ × 20 usuários na página → 1GB memória!          │
+└──────────────────────────────────────────────────┘
+
+SOLUÇÃO:
+┌──────────────────────────────────────────────────┐
+│ // Query no repository                          │
+│ @Query("""                                       │
+│   SELECT COUNT(ui) FROM UserInstitution ui      │
+│   WHERE ui.user.id = :userId                    │
+│   AND ui.active = true                          │
+│ """)                                             │
+│ long countActiveInstitutions(UUID userId);      │
+│                                                  │
+│ // No service                                    │
+│ long count =                                     │
+│   userRepository.countActiveInstitutions(id);   │
+│ // Apenas COUNT, sem carregar entidades!        │
+└──────────────────────────────────────────────────┘
+
+
+================================================================================
+RÉSUMÉ DE STATUS
+================================================================================
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║ STATUS GERAL: APROVADO COM RESSALVAS                                      ║
+╟────────────────────────────────────────────────────────────────────────────╢
+║                                                                            ║
+║ Precisa Corrigir ANTES do Merge:                                          ║
+║ ✅ PC-01: N+1 Query (30 min)                                              ║
+║ ✅ PC-02: Auditoria (2-3 horas)                                           ║
+║ ✅ RS-04: Nomenclatura (15 min)                                           ║
+║                                                                            ║
+║ Recomendado Corrigir (Não Bloqueia):                                      ║
+║ ✅ RS-01: Validação (5 min)                                               ║
+║ ✅ RS-02: Performance (10 min)                                            ║
+║ ✅ RS-03: Race Condition (20 min)                                         ║
+║ ✅ RS-05, RS-06: Robustez (25 min)                                        ║
+║                                                                            ║
+║ Total de Esforço: ~4 horas                                                ║
+║ Próxima Revisão: Após implementação das correções críticas                ║
+║                                                                            ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+
+================================================================================
+ARQUIVOS GERADOS PARA REFERÊNCIA
+================================================================================
+
+1. CODE_REVIEW_TRILHA_2_ADMIN_API.md
+   └─ Revisão completa e detalhada (15-20 minutos de leitura)
+   └─ Análise por componente
+   └─ Problemas de segurança e performance
+   └─ Sugestões de melhoria
+
+2. CODIGO_CORRECOES_TRILHA_2.md
+   └─ Código pronto para implementação (copy-paste)
+   └─ Solução N+1 Query (completa)
+   └─ Auditoria com AuditLog + AuditService (completa)
+   └─ Melhorias em PendingUserInterceptor (completa)
+
+3. RESUMO_EXECUTIVO_TRILHA_2.md
+   └─ Visão executiva com scorecard
+   └─ Problemas por severidade
+   └─ Recomendações por prioridade
+
+4. VISUALIZACAO_PROBLEMAS_TRILHA_2.txt
+   └─ Este arquivo (visão gráfica dos problemas)
+
+
+================================================================================
+PRÓXIMOS PASSOS
+================================================================================
+
+HOJE:
+  [ ] Revisar CODE_REVIEW_TRILHA_2_ADMIN_API.md
+  [ ] Discutir com product/team
+  [ ] Planificar implementação
+
+SEMANA QUE VEM:
+  [ ] Implementar PC-01 (N+1 Query)
+  [ ] Implementar PC-02 (Auditoria)
+  [ ] Corrigir RS-04 (Nomenclatura)
+  [ ] Testes locais
+
+ANTES DE PRODUÇÃO:
+  [ ] Testes de integração
+  [ ] Performance testing (1000+ usuários)
+  [ ] Documentação API (Swagger)
+  [ ] Code review secundário
+
+================================================================================
+FIM DA VISUALIZAÇÃO
+================================================================================

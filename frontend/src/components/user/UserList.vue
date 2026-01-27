@@ -22,11 +22,13 @@
         class="filter-select"
       />
 
-      <v-select
-        v-model="filters.role"
-        :items="roleFilterOptions"
-        placeholder="Função"
-        prepend-inner-icon="mdi-shield-account"
+      <v-autocomplete
+        v-if="props.isAdmin"
+        v-model="filters.institutionId"
+        :items="institutionOptions"
+        :loading="loadingInstitutions"
+        placeholder="Instituição"
+        prepend-inner-icon="mdi-office-building"
         hide-details
         clearable
         class="filter-select"
@@ -85,17 +87,6 @@
         </v-chip>
       </template>
 
-      <!-- Role Column -->
-      <template #item.role="{ item }">
-        <v-chip
-          :color="item.role === 'ADMIN' ? 'primary' : 'grey'"
-          size="small"
-          variant="tonal"
-        >
-          {{ item.role === 'ADMIN' ? 'Administrador' : 'Usuário' }}
-        </v-chip>
-      </template>
-
       <!-- Status Column -->
       <template #item.status="{ item }">
         <v-chip
@@ -110,6 +101,40 @@
         </v-chip>
       </template>
 
+      <!-- Institutions Column (only for admin) -->
+      <template #item.institutions="{ item }">
+        <div v-if="item.institutions && item.institutions.length > 0" class="d-flex flex-wrap" style="gap: 4px;">
+          <v-tooltip
+            v-for="inst in item.institutions.slice(0, 2)"
+            :key="inst.institutionId"
+            :text="inst.institutionName"
+            location="top"
+          >
+            <template #activator="{ props: tooltipProps }">
+              <v-chip
+                v-bind="tooltipProps"
+                size="small"
+                variant="tonal"
+                color="primary"
+              >
+                {{ inst.institutionAcronym }}
+              </v-chip>
+            </template>
+          </v-tooltip>
+          <v-chip
+            v-if="item.institutions.length > 2"
+            size="small"
+            variant="tonal"
+            color="grey"
+          >
+            +{{ item.institutions.length - 2 }}
+          </v-chip>
+        </div>
+        <span v-else class="text-caption text-medium-emphasis">
+          Nenhuma
+        </span>
+      </template>
+
       <!-- Created At Column -->
       <template #item.createdAt="{ item }">
         <span class="text-body-2">
@@ -120,7 +145,7 @@
       <!-- Actions Column -->
       <template #item.actions="{ item }">
         <div class="d-flex" style="gap: 4px;">
-          <v-tooltip text="Alterar" location="top">
+          <v-tooltip text="Editar Usuário" location="top">
             <template #activator="{ props: tooltipProps }">
               <v-btn
                 v-bind="tooltipProps"
@@ -132,24 +157,11 @@
             </template>
           </v-tooltip>
 
-          <v-tooltip text="Excluir" location="top">
+          <v-tooltip text="Gerenciar Instituições e Papéis" location="top">
             <template #activator="{ props: tooltipProps }">
               <v-btn
                 v-bind="tooltipProps"
-                icon="mdi-delete"
-                size="small"
-                variant="text"
-                color="error"
-                @click="$emit('delete', item)"
-              />
-            </template>
-          </v-tooltip>
-
-          <v-tooltip text="Gerenciar Instituições" location="top">
-            <template #activator="{ props: tooltipProps }">
-              <v-btn
-                v-bind="tooltipProps"
-                icon="mdi-office-building"
+                icon="mdi-office-building-cog"
                 size="small"
                 variant="text"
                 color="primary"
@@ -184,37 +196,30 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, computed, watch } from 'vue'
-
-interface User {
-  id: string
-  name: string
-  email: string
-  pictureUrl?: string
-  provider: string
-  role: string
-  status: string
-  createdAt: string
-}
+import { reactive, computed, watch, onMounted, ref } from 'vue'
+import { institutionService } from '@/services/institution.service'
+import type { Institution } from '@/types/institution.types'
+import type { UserListItem } from '@/types/user.types'
+import type { UserStatus } from '@/types/auth.types'
 
 interface Props {
-  items: User[]
+  items: UserListItem[]
   totalItems: number
   loading?: boolean
+  isAdmin?: boolean
 }
 
 interface Emits {
-  (event: 'update:filters', filters: Filters): void
-  (event: 'update:pagination', pagination: Pagination): void
-  (event: 'edit', user: User): void
-  (event: 'delete', user: User): void
-  (event: 'manage-institutions', user: User): void
+  (_event: 'update:filters', _filters: Filters): void
+  (_event: 'update:pagination', _pagination: Pagination): void
+  (_event: 'edit', _user: UserListItem): void
+  (_event: 'manage-institutions', _user: UserListItem): void
 }
 
 interface Filters {
-  search: string
-  status: string | null
-  role: string | null
+  search?: string
+  status?: UserStatus | null
+  institutionId?: string | null
 }
 
 interface Pagination {
@@ -223,7 +228,9 @@ interface Pagination {
   sortBy: Array<{ key: string; order: 'asc' | 'desc' }>
 }
 
-defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  isAdmin: false,
+})
 
 const emit = defineEmits<Emits>()
 
@@ -231,7 +238,7 @@ const emit = defineEmits<Emits>()
 const filters = reactive<Filters>({
   search: '',
   status: null,
-  role: null,
+  institutionId: null,
 })
 
 // Pagination State
@@ -241,31 +248,61 @@ const pagination = reactive<Pagination>({
   sortBy: [{ key: 'name', order: 'asc' }],
 })
 
+// Institutions for filter
+const loadingInstitutions = ref(false)
+const institutions = ref<Institution[]>([])
+
+const institutionOptions = computed(() => {
+  return institutions.value.map((inst) => ({
+    title: inst.name,
+    value: inst.id,
+  }))
+})
+
 const hasActiveFilters = computed(() => {
-  return !!(filters.search || filters.status !== null || filters.role !== null)
+  return !!(
+    filters.search ||
+    filters.status !== null ||
+    filters.institutionId !== null
+  )
 })
 
 // Table Headers
-const headers = [
-  { title: '', key: 'avatar', sortable: false, width: '60px' },
-  { title: 'Usuário', key: 'name', sortable: true },
-  { title: 'Provider', key: 'provider', sortable: true },
-  { title: 'Função', key: 'role', sortable: true },
-  { title: 'Status', key: 'status', sortable: true },
-  { title: 'Cadastrado em', key: 'createdAt', sortable: true },
-  { title: 'Ações', key: 'actions', sortable: false, align: 'end' as const, width: '140px' },
-]
+const headers = computed(() => {
+  const baseHeaders: any[] = [
+    { title: '', key: 'avatar', sortable: false, width: '60px' },
+    { title: 'Usuário', key: 'name', sortable: true },
+    { title: 'Provider', key: 'provider', sortable: true },
+    { title: 'Status', key: 'status', sortable: true },
+  ]
+
+  // Adicionar coluna de instituições apenas para admin
+  if (props.isAdmin) {
+    baseHeaders.push({
+      title: 'Instituições',
+      key: 'institutions',
+      sortable: false,
+      width: '200px'
+    })
+  }
+
+  baseHeaders.push({ title: 'Cadastrado em', key: 'createdAt', sortable: true })
+  baseHeaders.push({
+    title: 'Ações',
+    key: 'actions',
+    sortable: false,
+    align: 'end' as const,
+    width: '140px'
+  })
+
+  return baseHeaders
+})
 
 // Filter Options
 const statusFilterOptions = [
   { title: 'Ativo', value: 'ACTIVE' },
   { title: 'Pendente', value: 'PENDING' },
   { title: 'Inativo', value: 'INACTIVE' },
-]
-
-const roleFilterOptions = [
-  { title: 'Administrador', value: 'ADMIN' },
-  { title: 'Usuário', value: 'USER' },
 ]
 
 // Debounced search
@@ -303,12 +340,42 @@ const handleOptionsUpdate = (options: {
 
 // Watch filters (except search which uses debounce)
 watch(
-  () => [filters.status, filters.role],
+  () => [filters.status, filters.institutionId],
   () => {
     pagination.page = 1 // Reset to first page on filter change
     emitFilters()
   }
 )
+
+// Load institutions when component mounts if user is admin
+onMounted(() => {
+  if (props.isAdmin) {
+    fetchInstitutions()
+  }
+})
+
+// Fetch institutions for filter
+async function fetchInstitutions(): Promise<void> {
+  try {
+    loadingInstitutions.value = true
+    const response = await institutionService.listInstitutions({
+      page: 0,
+      size: 1000,
+      active: true,
+    })
+    institutions.value = response.content
+  } catch (error: any) {
+    // Se não tiver permissão, apenas loga (não quebra a UI)
+    if (error?.response?.status === 403) {
+      console.warn('User does not have permission to list institutions')
+    } else {
+      console.error('Failed to fetch institutions:', error)
+    }
+    institutions.value = []
+  } finally {
+    loadingInstitutions.value = false
+  }
+}
 
 // Utility functions
 const getUserInitials = (name: string): string => {
@@ -325,7 +392,7 @@ const getProviderColor = (provider: string): string => {
     GOOGLE: 'red',
     MICROSOFT: 'blue',
   }
-  return colors[provider] || 'grey'
+  return colors[String(provider)] || 'grey'
 }
 
 const getStatusColor = (status: string): string => {
@@ -334,7 +401,7 @@ const getStatusColor = (status: string): string => {
     PENDING: 'warning',
     INACTIVE: 'error',
   }
-  return colors[status] || 'grey'
+  return colors[String(status)] || 'grey'
 }
 
 const getStatusIcon = (status: string): string => {
@@ -343,7 +410,7 @@ const getStatusIcon = (status: string): string => {
     PENDING: 'mdi-clock-outline',
     INACTIVE: 'mdi-close-circle',
   }
-  return icons[status] || 'mdi-help-circle'
+  return icons[String(status)] || 'mdi-help-circle'
 }
 
 const getStatusLabel = (status: string): string => {
@@ -352,7 +419,7 @@ const getStatusLabel = (status: string): string => {
     PENDING: 'Pendente',
     INACTIVE: 'Inativo',
   }
-  return labels[status] || status
+  return labels[String(status)] || String(status)
 }
 
 const formatDate = (dateString: string): string => {

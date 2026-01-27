@@ -157,6 +157,24 @@ class InstitutionService {
   }
 
   /**
+   * Lista instituições ativas de forma simplificada (sem paginação completa).
+   * Útil para selects e autocompletes.
+   * @param params Parâmetros opcionais de listagem
+   * @returns Promise com página de instituições
+   */
+  async listInstitutions(params?: Partial<InstitutionListParams>): Promise<PageResponse<Institution>> {
+    return this.list({
+      page: params?.page || 0,
+      size: params?.size || 1000,
+      sort: params?.sort,
+      direction: params?.direction,
+      search: params?.search,
+      type: params?.type,
+      active: params?.active !== undefined ? params.active : true,
+    })
+  }
+
+  /**
    * Constrói FormData a partir de objeto de requisição.
    * Converte campos para formato multipart/form-data necessário
    * para upload de arquivos (logo).

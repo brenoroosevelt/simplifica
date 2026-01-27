@@ -1,11 +1,12 @@
 <template>
   <div class="institutions-page">
     <PageHeader
-      title="Instituições"
-      subtitle="Gerencie as instituições do sistema"
+      :title="pageTitle"
+      :subtitle="pageSubtitle"
     >
       <template #actions>
         <v-btn
+          v-if="isAdmin"
           color="primary"
           variant="flat"
           prepend-icon="mdi-plus"
@@ -21,6 +22,8 @@
         :items="institutions"
         :total-items="totalInstitutions"
         :loading="isLoading"
+        :is-admin="isAdmin"
+        :show-filters="isAdmin"
         @update:filters="handleFiltersUpdate"
         @update:pagination="handlePaginationUpdate"
         @edit="openEditDialog"
@@ -45,6 +48,7 @@
           <InstitutionForm
             :institution="selectedInstitution || undefined"
             :loading="formLoading"
+            :is-admin="isAdmin"
             @submit="handleFormSubmit"
             @cancel="closeFormDialog"
           />
@@ -115,6 +119,9 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth.store'
+import { useInstitutionStore } from '@/stores/institution.store'
 import PageHeader from '@/components/common/PageHeader.vue'
 import InstitutionList from '@/components/institution/InstitutionList.vue'
 import InstitutionForm from '@/components/institution/InstitutionForm.vue'
@@ -126,6 +133,20 @@ import type {
   InstitutionListParams,
   InstitutionType,
 } from '@/types/institution.types'
+
+// Stores
+const router = useRouter()
+const authStore = useAuthStore()
+const institutionStore = useInstitutionStore()
+const isAdmin = computed(() => authStore.isAdmin)
+
+// Computed titles
+const pageTitle = computed(() => isAdmin.value ? 'Instituições' : 'Instituição')
+const pageSubtitle = computed(() =>
+  isAdmin.value
+    ? 'Gerencie as instituições do sistema'
+    : 'Visualize e edite os dados da sua instituição'
+)
 
 interface Filters {
   search: string
@@ -152,7 +173,7 @@ const deleteLoading = ref(false)
 const filters = ref<Filters>({
   search: '',
   type: null,
-  active: null,
+  active: true, // Por padrão, mostrar apenas instituições ativas
 })
 
 const pagination = ref<Pagination>({
@@ -174,6 +195,14 @@ async function fetchInstitutions(): Promise<void> {
   isLoading.value = true
 
   try {
+    // Se não for admin, buscar apenas a instituição ativa
+    if (!isAdmin.value && institutionStore.activeInstitution) {
+      institutions.value = [institutionStore.activeInstitution]
+      totalInstitutions.value = 1
+      isLoading.value = false
+      return
+    }
+
     const sortBy = pagination.value.sortBy[0]
     const params: InstitutionListParams = {
       page: pagination.value.page - 1, // Backend uses 0-based pagination
@@ -277,10 +306,9 @@ async function handleDelete(): Promise<void> {
   }
 }
 
-function handleManageUsers(institution: Institution): void {
-  // TODO: Navigate to institution users page
-  console.log('Manage users for institution:', institution.id)
-  showSnackbar('Funcionalidade em desenvolvimento', 'info')
+function handleManageUsers(): void {
+  // Redirecionar para página de usuários
+  router.push({ name: 'admin-users' })
 }
 
 function showSnackbar(message: string, color: string): void {

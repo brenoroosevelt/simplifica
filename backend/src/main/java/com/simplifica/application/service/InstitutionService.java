@@ -16,6 +16,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.UUID;
 
@@ -33,6 +34,9 @@ public class InstitutionService {
 
     @Autowired
     private InstitutionRepository institutionRepository;
+
+    @Autowired
+    private FileStorageService fileStorageService;
 
     /**
      * Finds an institution by its ID.
@@ -124,6 +128,30 @@ public class InstitutionService {
     }
 
     /**
+     * Creates a new institution with logo upload.
+     *
+     * @param dto the institution data
+     * @param logo the logo file to upload (optional)
+     * @return the created Institution entity
+     * @throws ResourceAlreadyExistsException if acronym or domain already exists
+     */
+    @Transactional
+    public Institution create(CreateInstitutionDTO dto, MultipartFile logo) {
+        Institution institution = create(dto);
+
+        if (logo != null && !logo.isEmpty()) {
+            LOGGER.info("Uploading logo for institution: {}", institution.getId());
+            FileStorageService.FileUploadResult uploadResult =
+                    fileStorageService.storeImage(logo, "institutions");
+            institution.setLogoUrls(uploadResult.getFileUrl(), uploadResult.getThumbnailUrl());
+            institution = institutionRepository.save(institution);
+            LOGGER.info("Logo uploaded successfully for institution: {}", institution.getId());
+        }
+
+        return institution;
+    }
+
+    /**
      * Updates an existing institution.
      *
      * @param id the institution's UUID
@@ -158,6 +186,39 @@ public class InstitutionService {
         Institution saved = institutionRepository.save(institution);
         LOGGER.info("Updated institution: {}", id);
         return saved;
+    }
+
+    /**
+     * Updates an existing institution with optional logo upload.
+     *
+     * @param id the institution's UUID
+     * @param dto the updated data (only non-null fields are updated)
+     * @param logo the new logo file (optional, replaces existing if provided)
+     * @return the updated Institution entity
+     * @throws ResourceNotFoundException if the institution is not found
+     * @throws ResourceAlreadyExistsException if domain already exists
+     */
+    @Transactional
+    public Institution update(UUID id, UpdateInstitutionDTO dto, MultipartFile logo) {
+        Institution institution = update(id, dto);
+
+        if (logo != null && !logo.isEmpty()) {
+            LOGGER.info("Replacing logo for institution: {}", id);
+
+            // Delete old logo if exists
+            if (institution.getLogoUrl() != null) {
+                fileStorageService.deleteFile(institution.getLogoUrl());
+            }
+
+            // Upload new logo
+            FileStorageService.FileUploadResult uploadResult =
+                    fileStorageService.storeImage(logo, "institutions");
+            institution.setLogoUrls(uploadResult.getFileUrl(), uploadResult.getThumbnailUrl());
+            institution = institutionRepository.save(institution);
+            LOGGER.info("Logo replaced successfully for institution: {}", id);
+        }
+
+        return institution;
     }
 
     /**

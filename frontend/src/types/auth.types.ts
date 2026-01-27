@@ -5,7 +5,6 @@ export enum OAuthProvider {
   MICROSOFT = 'MICROSOFT',
 }
 
-export type UserRole = 'USER' | 'ADMIN'
 export type UserStatus = 'PENDING' | 'ACTIVE' | 'INACTIVE'
 
 export interface User {
@@ -15,7 +14,6 @@ export interface User {
   pictureUrl?: string
   provider: OAuthProvider
   providerId: string
-  role: UserRole
   status: UserStatus
   createdAt: string
   updatedAt: string

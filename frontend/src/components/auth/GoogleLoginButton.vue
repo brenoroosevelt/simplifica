@@ -7,8 +7,8 @@
       variant="outlined"
       :loading="loading"
       :disabled="loading"
-      @click="handleLogin"
       class="oauth-button"
+      @click="handleLogin"
     >
       <template v-slot:prepend>
         <v-img
