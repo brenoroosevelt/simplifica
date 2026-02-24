@@ -48,7 +48,9 @@
       "Bash(echo:*)",
       "Bash(pgrep:*)",
       "Bash(lsof:*)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(npm install:*)",
+      "Bash(git diff:*)"
     ]
   }
 }

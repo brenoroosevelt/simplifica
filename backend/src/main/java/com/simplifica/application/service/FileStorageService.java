@@ -61,7 +61,8 @@ public class FileStorageService {
             "institutions",
             "value-chains",
             "users",
-            "processes"
+            "processes",
+            "trainings"
     );
 
     @Autowired

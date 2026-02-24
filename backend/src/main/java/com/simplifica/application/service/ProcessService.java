@@ -117,18 +117,30 @@ public class ProcessService {
      * Finds all processes for the current institution with optional filtering and pagination.
      *
      * @param active filter by active status (null for all)
-     * @param search search term for name (null for no search)
+     * @param search search term for name and description (null for no search)
      * @param valueChainId filter by value chain (null for all)
      * @param isCritical filter by critical status (null for all)
+     * @param documentationStatus filter by documentation status (null for all)
+     * @param externalGuidanceStatus filter by external guidance status (null for all)
+     * @param riskManagementStatus filter by risk management status (null for all)
+     * @param mappingStatus filter by mapping status (null for all)
+     * @param responsibleUnitId filter by responsible unit (null for all)
+     * @param directUnitId filter by direct unit (null for all)
      * @param pageable pagination and sorting parameters
      * @return paginated list of process DTOs
      */
     public Page<ProcessDTO> findAll(Boolean active, String search, UUID valueChainId,
-                                    Boolean isCritical, Pageable pageable) {
+                                    Boolean isCritical, ProcessDocumentationStatus documentationStatus,
+                                    ProcessExternalGuidanceStatus externalGuidanceStatus,
+                                    ProcessRiskManagementStatus riskManagementStatus,
+                                    ProcessMappingStatus mappingStatus, UUID responsibleUnitId,
+                                    UUID directUnitId, Pageable pageable) {
         UUID institutionId = getCurrentInstitutionId();
         LOGGER.debug("Finding processes for institution {} with filters - active: {}, search: {}, " +
-                     "valueChainId: {}, isCritical: {}",
-                institutionId, active, search, valueChainId, isCritical);
+                     "valueChainId: {}, isCritical: {}, documentationStatus: {}, externalGuidanceStatus: {}, " +
+                     "riskManagementStatus: {}, mappingStatus: {}, responsibleUnitId: {}, directUnitId: {}",
+                institutionId, active, search, valueChainId, isCritical, documentationStatus,
+                externalGuidanceStatus, riskManagementStatus, mappingStatus, responsibleUnitId, directUnitId);
 
         // Build specification with MANDATORY institution filter
         Specification<Process> spec = Specification
@@ -139,13 +151,31 @@ public class ProcessService {
             spec = spec.and(ProcessSpecifications.hasActive(active));
         }
         if (search != null && !search.isBlank()) {
-            spec = spec.and(ProcessSpecifications.searchByName(search));
+            spec = spec.and(ProcessSpecifications.searchByMultipleFields(search));
         }
         if (valueChainId != null) {
             spec = spec.and(ProcessSpecifications.hasValueChain(valueChainId));
         }
         if (isCritical != null) {
             spec = spec.and(ProcessSpecifications.hasCritical(isCritical));
+        }
+        if (documentationStatus != null) {
+            spec = spec.and(ProcessSpecifications.hasDocumentationStatus(documentationStatus));
+        }
+        if (externalGuidanceStatus != null) {
+            spec = spec.and(ProcessSpecifications.hasExternalGuidanceStatus(externalGuidanceStatus));
+        }
+        if (riskManagementStatus != null) {
+            spec = spec.and(ProcessSpecifications.hasRiskManagementStatus(riskManagementStatus));
+        }
+        if (mappingStatus != null) {
+            spec = spec.and(ProcessSpecifications.hasMappingStatus(mappingStatus));
+        }
+        if (responsibleUnitId != null) {
+            spec = spec.and(ProcessSpecifications.hasResponsibleUnit(responsibleUnitId));
+        }
+        if (directUnitId != null) {
+            spec = spec.and(ProcessSpecifications.hasDirectUnit(directUnitId));
         }
 
         Page<Process> processes = processRepository.findAll(spec, pageable);

@@ -4,6 +4,10 @@ import com.simplifica.application.dto.CreateProcessDTO;
 import com.simplifica.application.dto.ProcessDTO;
 import com.simplifica.application.dto.UpdateProcessDTO;
 import com.simplifica.application.service.ProcessService;
+import com.simplifica.domain.entity.ProcessDocumentationStatus;
+import com.simplifica.domain.entity.ProcessExternalGuidanceStatus;
+import com.simplifica.domain.entity.ProcessRiskManagementStatus;
+import com.simplifica.domain.entity.ProcessMappingStatus;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -57,18 +61,30 @@ public class ProcessController {
      *
      * Query Parameters:
      * - active: Filter by active status (optional)
-     * - search: Search term for name (optional)
+     * - search: Search term for name and description (optional, case-insensitive)
      * - valueChainId: Filter by value chain (optional)
      * - isCritical: Filter by critical status (optional)
+     * - documentationStatus: Filter by documentation status (optional)
+     * - externalGuidanceStatus: Filter by external guidance status (optional)
+     * - riskManagementStatus: Filter by risk management status (optional)
+     * - mappingStatus: Filter by mapping status (optional)
+     * - responsibleUnitId: Filter by responsible unit (optional)
+     * - directUnitId: Filter by direct unit (optional)
      * - page: Page number (default: 0)
      * - size: Page size (default: 20)
      * - sort: Sort field (default: name)
      * - direction: Sort direction (default: ASC)
      *
      * @param active filter by active status (optional)
-     * @param search search term for name (optional)
+     * @param search search term for name and description (optional)
      * @param valueChainId filter by value chain (optional)
      * @param isCritical filter by critical status (optional)
+     * @param documentationStatus filter by documentation status (optional)
+     * @param externalGuidanceStatus filter by external guidance status (optional)
+     * @param riskManagementStatus filter by risk management status (optional)
+     * @param mappingStatus filter by mapping status (optional)
+     * @param responsibleUnitId filter by responsible unit (optional)
+     * @param directUnitId filter by direct unit (optional)
      * @param pageable pagination and sorting parameters
      * @return paginated list of processes
      */
@@ -79,9 +95,19 @@ public class ProcessController {
             @RequestParam(required = false) String search,
             @RequestParam(required = false) UUID valueChainId,
             @RequestParam(required = false) Boolean isCritical,
+            @RequestParam(required = false) ProcessDocumentationStatus documentationStatus,
+            @RequestParam(required = false) ProcessExternalGuidanceStatus externalGuidanceStatus,
+            @RequestParam(required = false) ProcessRiskManagementStatus riskManagementStatus,
+            @RequestParam(required = false) ProcessMappingStatus mappingStatus,
+            @RequestParam(required = false) UUID responsibleUnitId,
+            @RequestParam(required = false) UUID directUnitId,
             @PageableDefault(size = 20, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
 
-        Page<ProcessDTO> processes = processService.findAll(active, search, valueChainId, isCritical, pageable);
+        Page<ProcessDTO> processes = processService.findAll(
+            active, search, valueChainId, isCritical,
+            documentationStatus, externalGuidanceStatus, riskManagementStatus, mappingStatus,
+            responsibleUnitId, directUnitId, pageable
+        );
         return ResponseEntity.ok(processes);
     }
 

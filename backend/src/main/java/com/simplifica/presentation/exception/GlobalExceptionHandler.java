@@ -173,6 +173,30 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handles validation exceptions from business logic.
+     *
+     * @param ex the exception
+     * @param request the HTTP request
+     * @return an error response with 400 status
+     */
+    @ExceptionHandler(ValidationException.class)
+    public ResponseEntity<ErrorResponse> handleValidationException(
+            ValidationException ex,
+            HttpServletRequest request
+    ) {
+        LOGGER.warn("Validation error at {}: {}", request.getRequestURI(), ex.getMessage());
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error("Validation Error")
+                .message(ex.getMessage())
+                .path(request.getRequestURI())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
+
+    /**
      * Handles validation exceptions from Bean Validation.
      *
      * @param ex the exception

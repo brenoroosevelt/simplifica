@@ -56,7 +56,7 @@ onUnmounted(() => {
 
 <style scoped lang="scss">
 .private-main {
-  background: #f8fafc;
+  //background: #f8fafc;
 }
 
 .sidebar-drawer {

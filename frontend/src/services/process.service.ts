@@ -30,6 +30,13 @@ class ProcessService {
         active: params.active,
         valueChainId: params.valueChainId,
         isCritical: params.isCritical,
+        // Advanced filters
+        documentationStatus: params.documentationStatus,
+        externalGuidanceStatus: params.externalGuidanceStatus,
+        riskManagementStatus: params.riskManagementStatus,
+        mappingStatus: params.mappingStatus,
+        responsibleUnitId: params.responsibleUnitId,
+        directUnitId: params.directUnitId,
       },
     })
     return response.data

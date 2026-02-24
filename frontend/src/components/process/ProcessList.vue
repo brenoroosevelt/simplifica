@@ -1,48 +1,208 @@
 <template>
   <div class="process-list">
     <!-- Filters Section -->
-    <div v-if="showFilters" class="d-flex flex-column flex-md-row align-start align-md-center pa-4" style="gap: 12px;">
-      <v-text-field
-        v-model="filters.search"
-        placeholder="Buscar por nome..."
-        prepend-inner-icon="mdi-magnify"
-        hide-details
-        clearable
-        class="flex-grow-1"
-        @update:model-value="debouncedSearch"
-      />
+    <div v-if="showFilters" class="pa-4">
+      <!-- Main Filters Row -->
+      <div class="d-flex flex-column flex-md-row align-start align-md-center" style="gap: 12px;">
+        <v-text-field
+          v-model="filters.search"
+          placeholder="Buscar por nome..."
+          prepend-inner-icon="mdi-magnify"
+          hide-details
+          clearable
+          variant="outlined"
+          density="compact"
+          class="flex-grow-1"
+          @update:model-value="debouncedSearch"
+        />
 
-      <v-autocomplete
-        v-model="filters.valueChainId"
-        :items="valueChains"
-        item-title="name"
-        item-value="id"
-        placeholder="Cadeia de Valor"
-        prepend-inner-icon="mdi-chart-timeline-variant"
-        hide-details
-        clearable
-        class="filter-select"
-      />
+        <v-autocomplete
+          v-model="filters.valueChainId"
+          :items="valueChains"
+          item-title="name"
+          item-value="id"
+          placeholder="Cadeia de Valor"
+          prepend-inner-icon="mdi-chart-timeline-variant"
+          hide-details
+          clearable
+          variant="outlined"
+          density="compact"
+          class="filter-select"
+        />
 
-      <v-switch
-        v-model="filters.isCritical"
-        label="Crítico"
-        color="error"
-        hide-details
-        class="filter-switch"
-        :true-value="true"
-        :false-value="null"
-      />
+        <v-switch
+          v-model="filters.isCritical"
+          label="Crítico"
+          color="error"
+          hide-details
+          density="compact"
+          class="filter-switch"
+          :true-value="true"
+          :false-value="null"
+        />
 
-      <v-select
-        v-model="filters.active"
-        :items="statusFilterOptions"
-        placeholder="Status"
-        prepend-inner-icon="mdi-check-circle"
-        hide-details
-        clearable
-        class="filter-select"
-      />
+        <v-select
+          v-model="filters.active"
+          :items="statusFilterOptions"
+          placeholder="Status"
+          prepend-inner-icon="mdi-check-circle"
+          hide-details
+          clearable
+          variant="outlined"
+          density="compact"
+          class="filter-select"
+        />
+
+        <!-- Advanced Filters Toggle Icon -->
+        <v-btn
+          icon="mdi-filter-variant"
+          variant="tonal"
+          :color="showAdvancedFilters ? 'primary' : 'default'"
+          size="small"
+          @click="showAdvancedFilters = !showAdvancedFilters"
+        >
+          <v-icon>mdi-filter-variant</v-icon>
+          <v-badge
+            v-if="advancedFiltersCount > 0"
+            :content="advancedFiltersCount"
+            color="error"
+            floating
+          />
+        </v-btn>
+      </div>
+
+      <!-- Advanced Filters Content -->
+      <v-expand-transition>
+        <div v-show="showAdvancedFilters" class="mt-4">
+          <v-row dense>
+            <!-- Documentation Status -->
+            <v-col cols="12" md="6" lg="4">
+              <v-select
+                v-model="filters.documentationStatus"
+                :items="documentationStatusOptions"
+                label="Status Documentação"
+                prepend-inner-icon="mdi-file-document"
+                hide-details
+                clearable
+                variant="outlined"
+                density="compact"
+              />
+            </v-col>
+
+            <!-- External Guidance Status -->
+            <v-col cols="12" md="6" lg="4">
+              <v-select
+                v-model="filters.externalGuidanceStatus"
+                :items="externalGuidanceStatusOptions"
+                label="Status Orientação Externa"
+                prepend-inner-icon="mdi-compass"
+                hide-details
+                clearable
+                variant="outlined"
+                density="compact"
+              />
+            </v-col>
+
+            <!-- Risk Management Status -->
+            <v-col cols="12" md="6" lg="4">
+              <v-select
+                v-model="filters.riskManagementStatus"
+                :items="riskManagementStatusOptions"
+                label="Status Gestão de Riscos"
+                prepend-inner-icon="mdi-shield-alert"
+                hide-details
+                clearable
+                variant="outlined"
+                density="compact"
+              />
+            </v-col>
+
+            <!-- Mapping Status -->
+            <v-col cols="12" md="6" lg="4">
+              <v-select
+                v-model="filters.mappingStatus"
+                :items="mappingStatusOptions"
+                label="Status Mapeamento"
+                prepend-inner-icon="mdi-map"
+                hide-details
+                clearable
+                variant="outlined"
+                density="compact"
+              />
+            </v-col>
+
+            <!-- Responsible Unit -->
+            <v-col cols="12" md="6" lg="4">
+              <v-autocomplete
+                v-model="filters.responsibleUnitId"
+                :items="units"
+                item-title="name"
+                item-value="id"
+                label="Unidade Responsável"
+                prepend-inner-icon="mdi-office-building-outline"
+                hide-details
+                clearable
+                variant="outlined"
+                density="compact"
+                :loading="loadingUnits"
+                no-data-text="Nenhuma unidade encontrada"
+              >
+                <template #item="{ props: itemProps, item }">
+                  <v-list-item v-bind="itemProps">
+                    <template #prepend>
+                      <v-chip size="x-small" color="primary" variant="tonal" class="mr-2">
+                        {{ item.raw.acronym }}
+                      </v-chip>
+                    </template>
+                  </v-list-item>
+                </template>
+              </v-autocomplete>
+            </v-col>
+
+            <!-- Direct Unit -->
+            <v-col cols="12" md="6" lg="4">
+              <v-autocomplete
+                v-model="filters.directUnitId"
+                :items="units"
+                item-title="name"
+                item-value="id"
+                label="Unidade Direta"
+                prepend-inner-icon="mdi-office-building"
+                hide-details
+                clearable
+                variant="outlined"
+                density="compact"
+                :loading="loadingUnits"
+                no-data-text="Nenhuma unidade encontrada"
+              >
+                <template #item="{ props: itemProps, item }">
+                  <v-list-item v-bind="itemProps">
+                    <template #prepend>
+                      <v-chip size="x-small" color="primary" variant="tonal" class="mr-2">
+                        {{ item.raw.acronym }}
+                      </v-chip>
+                    </template>
+                  </v-list-item>
+                </template>
+              </v-autocomplete>
+            </v-col>
+          </v-row>
+
+          <!-- Clear Filters Button -->
+          <div class="d-flex justify-end mt-3">
+            <v-btn
+              variant="text"
+              color="default"
+              prepend-icon="mdi-close"
+              size="small"
+              :disabled="advancedFiltersCount === 0"
+              @click="clearAdvancedFilters"
+            >
+              Limpar Filtros
+            </v-btn>
+          </div>
+        </div>
+      </v-expand-transition>
     </div>
 
     <v-divider v-if="showFilters" />
@@ -211,9 +371,16 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, computed, watch, onBeforeUnmount } from 'vue'
-import type { Process, ProcessMappingStatus } from '@/types/process.types'
+import { reactive, computed, watch, onBeforeUnmount, ref } from 'vue'
+import type {
+  Process,
+  ProcessMappingStatus,
+  ProcessDocumentationStatus,
+  ProcessExternalGuidanceStatus,
+  ProcessRiskManagementStatus,
+} from '@/types/process.types'
 import type { ValueChain } from '@/types/valueChain.types'
+import type { Unit } from '@/types/unit.types'
 
 interface Props {
   items: Process[]
@@ -221,6 +388,8 @@ interface Props {
   loading?: boolean
   showFilters?: boolean
   valueChains?: ValueChain[]
+  units?: Unit[]
+  loadingUnits?: boolean
 }
 
 interface Emits {
@@ -236,6 +405,13 @@ interface Filters {
   active: boolean | null
   valueChainId: string | null
   isCritical: boolean | null
+  // Advanced filters
+  documentationStatus: ProcessDocumentationStatus | null
+  externalGuidanceStatus: ProcessExternalGuidanceStatus | null
+  riskManagementStatus: ProcessRiskManagementStatus | null
+  mappingStatus: ProcessMappingStatus | null
+  responsibleUnitId: string | null
+  directUnitId: string | null
 }
 
 interface Pagination {
@@ -248,9 +424,14 @@ withDefaults(defineProps<Props>(), {
   loading: false,
   showFilters: true,
   valueChains: () => [],
+  units: () => [],
+  loadingUnits: false,
 })
 
 const emit = defineEmits<Emits>()
+
+// Advanced Filters Toggle
+const showAdvancedFilters = ref(false)
 
 // Filters State
 const filters = reactive<Filters>({
@@ -258,6 +439,13 @@ const filters = reactive<Filters>({
   active: null,
   valueChainId: null,
   isCritical: null,
+  // Advanced filters
+  documentationStatus: null,
+  externalGuidanceStatus: null,
+  riskManagementStatus: null,
+  mappingStatus: null,
+  responsibleUnitId: null,
+  directUnitId: null,
 })
 
 // Pagination State
@@ -272,8 +460,32 @@ const hasActiveFilters = computed(() => {
     filters.search ||
     filters.active !== null ||
     filters.valueChainId ||
-    filters.isCritical !== null
+    filters.isCritical !== null ||
+    filters.documentationStatus !== null ||
+    filters.externalGuidanceStatus !== null ||
+    filters.riskManagementStatus !== null ||
+    filters.mappingStatus !== null ||
+    filters.responsibleUnitId !== null ||
+    filters.directUnitId !== null
   )
+})
+
+// Count all active filters (main + advanced)
+const advancedFiltersCount = computed(() => {
+  let count = 0
+  // Main filters
+  if (filters.search) count++
+  if (filters.active !== null) count++
+  if (filters.valueChainId) count++
+  if (filters.isCritical !== null) count++
+  // Advanced filters
+  if (filters.documentationStatus !== null) count++
+  if (filters.externalGuidanceStatus !== null) count++
+  if (filters.riskManagementStatus !== null) count++
+  if (filters.mappingStatus !== null) count++
+  if (filters.responsibleUnitId !== null) count++
+  if (filters.directUnitId !== null) count++
+  return count
 })
 
 // Table Headers
@@ -292,6 +504,47 @@ const statusFilterOptions = [
   { title: 'Ativo', value: true },
   { title: 'Inativo', value: false },
 ]
+
+const documentationStatusOptions = [
+  { title: 'Documentado', value: 'DOCUMENTED' },
+  { title: 'Não Documentado', value: 'NOT_DOCUMENTED' },
+  { title: 'Documentado com Pendências', value: 'DOCUMENTED_WITH_PENDING' },
+]
+
+const externalGuidanceStatusOptions = [
+  { title: 'Disponível', value: 'AVAILABLE' },
+  { title: 'Não Disponível', value: 'NOT_AVAILABLE' },
+  { title: 'Disponível com Pendências', value: 'AVAILABLE_WITH_PENDING' },
+  { title: 'Não Necessário', value: 'NOT_NECESSARY' },
+]
+
+const riskManagementStatusOptions = [
+  { title: 'Preparado', value: 'PREPARED' },
+  { title: 'Preparado com Pendências', value: 'PREPARED_WITH_PENDING' },
+  { title: 'Não Preparado', value: 'NOT_PREPARED' },
+]
+
+const mappingStatusOptions = [
+  { title: 'Mapeado', value: 'MAPPED' },
+  { title: 'Não Mapeado', value: 'NOT_MAPPED' },
+  { title: 'Mapeado com Pendências', value: 'MAPPED_WITH_PENDING' },
+]
+
+// Clear all filters (main + advanced)
+const clearAdvancedFilters = () => {
+  // Clear main filters
+  filters.search = ''
+  filters.active = null
+  filters.valueChainId = null
+  filters.isCritical = null
+  // Clear advanced filters
+  filters.documentationStatus = null
+  filters.externalGuidanceStatus = null
+  filters.riskManagementStatus = null
+  filters.mappingStatus = null
+  filters.responsibleUnitId = null
+  filters.directUnitId = null
+}
 
 // Debounced search
 let searchTimeout: ReturnType<typeof setTimeout> | null = null
@@ -328,7 +581,17 @@ const handleOptionsUpdate = (options: {
 
 // Watch filters (except search which uses debounce)
 watch(
-  () => [filters.active, filters.valueChainId, filters.isCritical],
+  () => [
+    filters.active,
+    filters.valueChainId,
+    filters.isCritical,
+    filters.documentationStatus,
+    filters.externalGuidanceStatus,
+    filters.riskManagementStatus,
+    filters.mappingStatus,
+    filters.responsibleUnitId,
+    filters.directUnitId,
+  ],
   () => {
     pagination.page = 1 // Reset to first page on filter change
     emitFilters()
@@ -395,7 +658,7 @@ const getMappingStatusLabel = (status: ProcessMappingStatus): string => {
 }
 
 .filter-switch {
-  min-width: 120px;
+  min-width: 100px;
 }
 
 @media (max-width: 960px) {

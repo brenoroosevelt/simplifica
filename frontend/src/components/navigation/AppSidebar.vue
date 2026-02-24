@@ -107,6 +107,15 @@ const adminItems = computed(() => {
     })
   }
 
+  // Capacitações: disponível para ADMIN e MANAGER
+  if (canManageUsers.value) {
+    items.push({
+      title: 'Capacitações',
+      icon: 'mdi-school',
+      to: '/trainings',
+    })
+  }
+
   // Configurações: apenas para ADMIN
   if (isAdmin.value) {
     items.push({
@@ -125,7 +134,7 @@ const adminItems = computed(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: white;
+  //background: white;
 }
 
 .sidebar-menu {

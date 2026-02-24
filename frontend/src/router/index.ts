@@ -115,6 +115,50 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/trainings',
+    name: 'trainings',
+    component: () => import('@/views/private/TrainingsPage.vue'),
+    meta: {
+      layout: 'private',
+      requiresAuth: true,
+      requiresInstitution: true,
+      requiresUserManagement: true, // ADMIN ou MANAGER
+    },
+  },
+  {
+    path: '/trainings/new',
+    name: 'training-new',
+    component: () => import('@/views/private/TrainingEditPage.vue'),
+    meta: {
+      layout: 'private',
+      requiresAuth: true,
+      requiresInstitution: true,
+      requiresUserManagement: true, // ADMIN ou MANAGER
+    },
+  },
+  {
+    path: '/trainings/:id',
+    name: 'training-detail',
+    component: () => import('@/views/private/TrainingDetailPage.vue'),
+    meta: {
+      layout: 'private',
+      requiresAuth: true,
+      requiresInstitution: true,
+      requiresUserManagement: true, // ADMIN ou MANAGER
+    },
+  },
+  {
+    path: '/trainings/:id/edit',
+    name: 'training-edit',
+    component: () => import('@/views/private/TrainingEditPage.vue'),
+    meta: {
+      layout: 'private',
+      requiresAuth: true,
+      requiresInstitution: true,
+      requiresUserManagement: true, // ADMIN ou MANAGER
+    },
+  },
+  {
     path: '/admin/settings',
     name: 'admin-settings',
     component: () => import('@/views/private/admin/SettingsPage.vue'),

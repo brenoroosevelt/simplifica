@@ -1,7 +1,7 @@
 <template>
   <v-app-bar
     elevation="0"
-    color="white"
+
     height="72"
     class="app-header"
   >
@@ -21,8 +21,10 @@
 
     <!-- Actions do contexto privado -->
     <template v-if="showPrivateActions">
+
       <InstitutionSwitcher />
       <v-btn icon="mdi-bell-outline" variant="text" class="mx-1" />
+      <themes/>
       <UserProfile />
     </template>
 
@@ -74,6 +76,7 @@ import AppBrand from './AppBrand.vue'
 import UserProfile from './UserProfile.vue'
 import InstitutionSwitcher from '@/components/institution/InstitutionSwitcher.vue'
 import { useDrawer } from '@/composables/useDrawer'
+import Themes from "@/components/theme/themes.vue";
 
 interface Props {
   variant?: 'public' | 'private'

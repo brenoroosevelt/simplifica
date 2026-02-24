@@ -5,14 +5,17 @@
       subtitle="Gerencie as unidades da instituição"
     >
       <template #actions>
-        <v-btn
-          color="primary"
-          variant="flat"
-          prepend-icon="mdi-plus"
-          @click="openCreateDialog"
-        >
-          Nova Unidade
-        </v-btn>
+        <div class="d-flex" style="gap: 12px;">
+          <UnitCsvImport @import-completed="loadUnits" />
+          <v-btn
+            color="primary"
+            variant="flat"
+            prepend-icon="mdi-plus"
+            @click="openCreateDialog"
+          >
+            Nova Unidade
+          </v-btn>
+        </div>
       </template>
     </PageHeader>
 
@@ -118,6 +121,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import PageHeader from '@/components/common/PageHeader.vue'
 import UnitList from '@/components/unit/UnitList.vue'
 import UnitForm from '@/components/unit/UnitForm.vue'
+import UnitCsvImport from '@/components/unit/UnitCsvImport.vue'
 import { unitService } from '@/services/unit.service'
 import type {
   Unit,

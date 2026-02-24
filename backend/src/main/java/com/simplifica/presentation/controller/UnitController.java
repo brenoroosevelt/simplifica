@@ -3,7 +3,10 @@ package com.simplifica.presentation.controller;
 import com.simplifica.application.dto.CreateUnitDTO;
 import com.simplifica.application.dto.UpdateUnitDTO;
 import com.simplifica.application.dto.UnitDTO;
+import com.simplifica.application.dto.UnitImportResultDTO;
+import com.simplifica.application.service.UnitImportService;
 import com.simplifica.application.service.UnitService;
+import com.simplifica.config.security.UserPrincipal;
 import com.simplifica.domain.entity.Unit;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +17,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -23,6 +27,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.UUID;
 
@@ -43,6 +48,9 @@ public class UnitController {
 
     @Autowired
     private UnitService unitService;
+
+    @Autowired
+    private UnitImportService unitImportService;
 
     /**
      * Lists all units with optional filters and pagination.
@@ -122,5 +130,33 @@ public class UnitController {
     public ResponseEntity<Void> deleteUnit(@PathVariable UUID id) {
         unitService.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Imports units from a CSV file.
+     *
+     * Supports bulk import with partial success - individual row failures
+     * do not stop processing of other rows.
+     *
+     * Multi-tenancy:
+     * - MANAGER: All units imported to their current institution
+     * - ADMIN: Can specify institutionId or institutionAcronym in CSV
+     *
+     * CSV format:
+     * Required columns: name, acronym
+     * Optional columns: description, active, institutionId, institutionAcronym
+     *
+     * @param file the CSV file containing unit data
+     * @param userPrincipal the authenticated user
+     * @return import result with success/failure counts and error details
+     */
+    @PostMapping("/import-csv")
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
+    public ResponseEntity<UnitImportResultDTO> importUnitsFromCsv(
+            @RequestParam("file") MultipartFile file,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+
+        UnitImportResultDTO result = unitImportService.importUnitsFromCsv(file, userPrincipal);
+        return ResponseEntity.ok(result);
     }
 }

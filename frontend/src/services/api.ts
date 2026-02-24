@@ -1,6 +1,17 @@
 import axios from 'axios'
 import type { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 'axios'
 
+// Limpar valores inválidos do localStorage na inicialização
+const cleanupLocalStorage = () => {
+  const institutionId = localStorage.getItem('active_institution_id')
+  if (institutionId === 'undefined' || institutionId === 'null' || !institutionId) {
+    localStorage.removeItem('active_institution_id')
+  }
+}
+
+// Executar limpeza imediatamente
+cleanupLocalStorage()
+
 const apiClient: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
   timeout: 30000,
@@ -20,8 +31,22 @@ apiClient.interceptors.request.use(
 
     // Adicionar header X-Institution-Id se houver instituição ativa
     const institutionId = localStorage.getItem('active_institution_id')
-    if (institutionId && config.headers) {
+
+    // Limpar valores inválidos do localStorage
+    if (institutionId === 'undefined' || institutionId === 'null') {
+      localStorage.removeItem('active_institution_id')
+    } else if (institutionId && config.headers) {
       config.headers['X-Institution-Id'] = institutionId
+    }
+
+    // Log detalhado para debug (remover depois)
+    if (config.url?.includes('/trainings') && config.method === 'post') {
+      console.log('=== REQUEST DEBUG ===')
+      console.log('URL:', config.url)
+      console.log('Method:', config.method)
+      console.log('Headers:', JSON.stringify(config.headers, null, 2))
+      console.log('Data:', JSON.stringify(config.data, null, 2))
+      console.log('====================')
     }
 
     return config

@@ -5,6 +5,7 @@ import type {
   UnitUpdateRequest,
   UnitListParams,
   PageResponse,
+  UnitImportResult,
 } from '@/types/unit.types'
 
 /**
@@ -73,6 +74,28 @@ class UnitService {
    */
   async delete(id: string): Promise<void> {
     await apiClient.delete(`${this.BASE_PATH}/${id}`)
+  }
+
+  /**
+   * Importa unidades a partir de arquivo CSV.
+   * @param file Arquivo CSV a ser importado
+   * @returns Promise com resultado da importação
+   */
+  async importUnitsFromCsv(file: File): Promise<UnitImportResult> {
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const response = await apiClient.post<UnitImportResult>(
+      `${this.BASE_PATH}/import-csv`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    )
+
+    return response.data
   }
 }
 

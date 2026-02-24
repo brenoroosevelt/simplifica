@@ -23,6 +23,8 @@
         :loading="isLoading"
         :show-filters="true"
         :value-chains="valueChains"
+        :units="units"
+        :loading-units="loadingUnits"
         @update:filters="handleFiltersChange"
         @update:pagination="handlePageChange"
         @edit="openEditDialog"

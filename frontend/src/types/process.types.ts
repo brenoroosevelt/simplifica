@@ -103,6 +103,13 @@ export interface ProcessListParams {
   active?: boolean
   valueChainId?: string
   isCritical?: boolean
+  // Advanced filters
+  documentationStatus?: ProcessDocumentationStatus
+  externalGuidanceStatus?: ProcessExternalGuidanceStatus
+  riskManagementStatus?: ProcessRiskManagementStatus
+  mappingStatus?: ProcessMappingStatus
+  responsibleUnitId?: string
+  directUnitId?: string
 }
 
 export interface PageResponse<T> {

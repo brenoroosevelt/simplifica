@@ -69,6 +69,7 @@ const institutionalTheme = {
     background: '#F8FAFC', // slate-50
     // Surface branco puro
     surface: '#FFFFFF',
+
   },
 }
 
