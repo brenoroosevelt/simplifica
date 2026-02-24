@@ -454,24 +454,23 @@ public class ProcessService {
     }
 
     /**
-     * Uploads multiple HTML mapping files for a process.
-     * Each file is validated and stored using FileStorageService.
+     * Uploads a ZIP file containing Bizagi process mapping exports.
+     * The ZIP file is extracted and stored, with a mapping entry created for the extracted content.
      *
      * @param processId the process UUID
-     * @param files list of HTML files to upload
-     * @return the updated process DTO with new mappings
+     * @param file the ZIP file containing the Bizagi export
+     * @return the updated process DTO with new mapping
      * @throws ResourceNotFoundException if the process is not found
      * @throws UnauthorizedAccessException if the process belongs to another institution
      * @throws BadRequestException if file validation fails
      */
     @Transactional
-    public ProcessDTO uploadMappings(UUID processId, List<MultipartFile> files) {
+    public ProcessDTO uploadMappings(UUID processId, MultipartFile file) {
         UUID institutionId = getCurrentInstitutionId();
-        LOGGER.info("Uploading {} HTML mapping file(s) for process {} in institution {}",
-                files.size(), processId, institutionId);
+        LOGGER.info("Uploading ZIP mapping file for process {} in institution {}", processId, institutionId);
 
-        if (files == null || files.isEmpty()) {
-            throw new BadRequestException("At least one file is required");
+        if (file == null || file.isEmpty()) {
+            throw new BadRequestException("ZIP file is required");
         }
 
         Process process = processRepository.findByIdAndInstitutionId(processId, institutionId)
@@ -480,32 +479,34 @@ public class ProcessService {
         // Validate tenant access
         validateTenantAccess(process);
 
-        List<ProcessMapping> newMappings = new ArrayList<>();
-
-        for (MultipartFile file : files) {
-            // Upload HTML file using FileStorageService
-            FileStorageService.FileUploadResult uploadResult =
-                    fileStorageService.storeHtmlFile(file, "processes");
-
-            // Create ProcessMapping entity
-            ProcessMapping mapping = ProcessMapping.builder()
-                    .process(process)
-                    .fileUrl(uploadResult.getFileUrl())
-                    .filename(uploadResult.getFilename())
-                    .fileSize(file.getSize())
-                    .build();
-
-            newMappings.add(mapping);
-            process.addMapping(mapping);
-
-            LOGGER.debug("Created mapping for file: {} ({})", uploadResult.getFilename(), file.getOriginalFilename());
+        // Delete existing mappings (we'll replace with the new ZIP content)
+        if (!process.getMappings().isEmpty()) {
+            LOGGER.info("Deleting {} existing mapping(s) for process {}", process.getMappings().size(), processId);
+            List<ProcessMapping> existingMappings = new ArrayList<>(process.getMappings());
+            for (ProcessMapping mapping : existingMappings) {
+                fileStorageService.deleteFile(mapping.getFileUrl());
+                process.removeMapping(mapping);
+            }
+            processMappingRepository.deleteAll(existingMappings);
         }
 
-        // Save all mappings
-        processMappingRepository.saveAll(newMappings);
+        // Extract and store ZIP file
+        FileStorageService.FileUploadResult uploadResult =
+                fileStorageService.storeZipFile(file, "processes", processId);
+
+        // Create ProcessMapping entity for the extracted content
+        ProcessMapping mapping = ProcessMapping.builder()
+                .process(process)
+                .fileUrl(uploadResult.getFileUrl())
+                .filename(file.getOriginalFilename())  // Keep original ZIP filename for reference
+                .fileSize(file.getSize())
+                .build();
+
+        process.addMapping(mapping);
+        processMappingRepository.save(mapping);
 
         Process saved = processRepository.save(process);
-        LOGGER.info("Uploaded {} HTML mapping file(s) successfully for process {}", files.size(), processId);
+        LOGGER.info("Uploaded and extracted ZIP mapping file successfully for process {}", processId);
 
         return ProcessDTO.fromEntity(saved);
     }

@@ -5,6 +5,8 @@ import com.simplifica.presentation.exception.BadRequestException;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
+import org.apache.commons.compress.archivers.zip.ZipFile;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -16,10 +18,12 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.Enumeration;
 import java.util.Set;
 import java.util.UUID;
 
@@ -45,12 +49,23 @@ public class FileStorageService {
     private static final int THUMBNAIL_SIZE = 150;
     private static final String THUMBNAIL_FOLDER = "thumbnails";
     private static final long MAX_HTML_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+    private static final long MAX_ZIP_FILE_SIZE_BYTES = 50 * 1024 * 1024; // 50MB
+    private static final long MAX_EXTRACTED_SIZE_BYTES = 100 * 1024 * 1024; // 100MB
     private static final int HTML_VALIDATION_BUFFER_SIZE = 512; // Bytes to read from start of file
     private static final Set<String> HTML_INDICATORS = Set.of(
             "<!DOCTYPE", "<!doctype",
             "<html", "<HTML",
             "<head", "<HEAD",
             "<body", "<BODY"
+    );
+
+    /**
+     * Allowed file extensions within ZIP files for security.
+     */
+    private static final Set<String> ALLOWED_ZIP_EXTENSIONS = Set.of(
+            "html", "htm", "css", "js", "json",
+            "jpg", "jpeg", "png", "gif", "svg", "webp",
+            "txt", "xml"
     );
 
     /**
@@ -170,6 +185,75 @@ public class FileStorageService {
         } catch (IOException e) {
             log.error("Failed to store HTML file: {}", originalFilename, e);
             throw new BadRequestException("Failed to store HTML file: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Extracts and stores a ZIP file containing Bizagi exports.
+     *
+     * Validates the ZIP file, extracts it to a unique directory, and validates
+     * all extracted files for security. Returns the URL to the index.html file
+     * or the first HTML file found.
+     *
+     * @param file the ZIP file to extract
+     * @param folder the folder name within the storage path (e.g., "processes")
+     * @param processId the UUID of the process (used for directory naming)
+     * @return FileUploadResult containing URL to the extracted HTML content
+     * @throws BadRequestException if validation fails
+     */
+    public FileUploadResult storeZipFile(MultipartFile file, String folder, UUID processId) {
+        log.info("Starting ZIP file extraction for folder: {}, processId: {}", folder, processId);
+
+        // Security: Validate folder before any file operations
+        validateFolder(folder);
+
+        if (file == null || file.isEmpty()) {
+            throw new BadRequestException("File is required and cannot be empty");
+        }
+
+        validateZipFile(file);
+
+        String extractionDirName = processId.toString();
+
+        try {
+            // Create extraction directory: basePath/processes/{processId}/
+            Path folderPath = createDirectories(folder);
+            Path extractionPath = folderPath.resolve(extractionDirName);
+
+            // Delete existing content if any
+            if (Files.exists(extractionPath)) {
+                deleteDirectoryRecursively(extractionPath);
+            }
+
+            Files.createDirectories(extractionPath);
+
+            // Save ZIP temporarily
+            Path tempZipPath = Files.createTempFile("upload", ".zip");
+            try (InputStream inputStream = file.getInputStream()) {
+                Files.copy(inputStream, tempZipPath, StandardCopyOption.REPLACE_EXISTING);
+            }
+
+            // Extract ZIP
+            String indexHtmlPath = extractZipFile(tempZipPath.toFile(), extractionPath);
+
+            // Delete temporary ZIP
+            Files.deleteIfExists(tempZipPath);
+
+            // Build URL to index.html or first HTML file
+            String fileUrl = buildPublicUrl(folder, extractionDirName + "/" + indexHtmlPath);
+
+            log.info("ZIP file extracted successfully to: {}", extractionPath);
+            log.info("Index HTML URL: {}", fileUrl);
+
+            return FileUploadResult.builder()
+                    .fileUrl(fileUrl)
+                    .thumbnailUrl(null)
+                    .filename(indexHtmlPath)
+                    .build();
+
+        } catch (IOException e) {
+            log.error("Failed to extract ZIP file", e);
+            throw new BadRequestException("Failed to extract ZIP file: " + e.getMessage(), e);
         }
     }
 
@@ -338,6 +422,164 @@ public class FileStorageService {
             log.error("Failed to validate HTML content", e);
             throw new BadRequestException("Failed to validate HTML file content: " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * Validates ZIP file size, MIME type, and extension.
+     *
+     * @param file the file to validate
+     * @throws BadRequestException if validation fails
+     */
+    private void validateZipFile(MultipartFile file) {
+        log.debug("Validating ZIP file: size={} bytes, contentType={}", file.getSize(), file.getContentType());
+
+        // Validate file size (50MB max)
+        if (file.getSize() > MAX_ZIP_FILE_SIZE_BYTES) {
+            throw new BadRequestException(
+                    "ZIP file size exceeds maximum allowed size of 50 MB"
+            );
+        }
+
+        // Validate MIME type
+        String contentType = file.getContentType();
+        if (contentType == null || (!contentType.equals("application/zip")
+                && !contentType.equals("application/x-zip-compressed"))) {
+            throw new BadRequestException("File must be a ZIP file");
+        }
+
+        // Validate extension
+        String extension = getFileExtension(file.getOriginalFilename());
+        if (!extension.equals("zip")) {
+            throw new BadRequestException("File must have .zip extension");
+        }
+
+        log.debug("ZIP file validation passed");
+    }
+
+    /**
+     * Extracts a ZIP file to a target directory with security validations.
+     *
+     * @param zipFile the ZIP file to extract
+     * @param targetDir the target directory
+     * @return the relative path to index.html or first HTML file found
+     * @throws IOException if an I/O error occurs
+     * @throws BadRequestException if security validation fails
+     */
+    private String extractZipFile(File zipFile, Path targetDir) throws IOException {
+        log.info("Extracting ZIP file to: {}", targetDir);
+
+        String indexHtmlPath = null;
+        long totalExtractedSize = 0;
+
+        try (ZipFile zip = new ZipFile(zipFile)) {
+            Enumeration<ZipArchiveEntry> entries = zip.getEntries();
+
+            while (entries.hasMoreElements()) {
+                ZipArchiveEntry entry = entries.nextElement();
+                String entryName = entry.getName();
+
+                // Security: Prevent path traversal
+                if (entryName.contains("..")) {
+                    log.warn("Path traversal attempt detected in ZIP: {}", entryName);
+                    throw new BadRequestException("Invalid file path in ZIP: " + entryName);
+                }
+
+                // Skip directories and hidden files
+                if (entry.isDirectory() || entryName.startsWith(".") || entryName.contains("/.")) {
+                    continue;
+                }
+
+                // Security: Check file extension
+                String extension = getFileExtensionFromPath(entryName);
+                if (extension != null && !ALLOWED_ZIP_EXTENSIONS.contains(extension)) {
+                    log.warn("Skipping file with disallowed extension: {}", entryName);
+                    continue;
+                }
+
+                // Security: Check total extracted size
+                totalExtractedSize += entry.getSize();
+                if (totalExtractedSize > MAX_EXTRACTED_SIZE_BYTES) {
+                    throw new BadRequestException("Extracted content exceeds maximum size of 100 MB");
+                }
+
+                // Extract file
+                Path targetFile = targetDir.resolve(entryName).normalize();
+
+                // Security: Ensure target file is within target directory
+                if (!targetFile.startsWith(targetDir)) {
+                    log.warn("Path traversal attempt detected: {}", entryName);
+                    throw new BadRequestException("Invalid file path in ZIP");
+                }
+
+                // Create parent directories if needed
+                Files.createDirectories(targetFile.getParent());
+
+                // Write file
+                try (InputStream inputStream = zip.getInputStream(entry);
+                     OutputStream outputStream = Files.newOutputStream(targetFile)) {
+                    byte[] buffer = new byte[8192];
+                    int len;
+                    while ((len = inputStream.read(buffer)) > 0) {
+                        outputStream.write(buffer, 0, len);
+                    }
+                }
+
+                log.debug("Extracted: {}", entryName);
+
+                // Track index.html or first HTML file
+                if (entryName.equalsIgnoreCase("index.html") || entryName.equalsIgnoreCase("index.htm")) {
+                    indexHtmlPath = entryName;
+                } else if (indexHtmlPath == null && extension != null
+                        && (extension.equals("html") || extension.equals("htm"))) {
+                    indexHtmlPath = entryName;
+                }
+            }
+        }
+
+        if (indexHtmlPath == null) {
+            throw new BadRequestException("No HTML file found in ZIP");
+        }
+
+        log.info("ZIP extraction completed. Total files extracted, total size: {} bytes", totalExtractedSize);
+        return indexHtmlPath;
+    }
+
+    /**
+     * Recursively deletes a directory and all its contents.
+     *
+     * @param path the directory to delete
+     * @throws IOException if an I/O error occurs
+     */
+    private void deleteDirectoryRecursively(Path path) throws IOException {
+        if (Files.exists(path)) {
+            Files.walk(path)
+                    .sorted((a, b) -> b.compareTo(a)) // Reverse order to delete files before directories
+                    .forEach(p -> {
+                        try {
+                            Files.delete(p);
+                        } catch (IOException e) {
+                            log.warn("Failed to delete: {}", p, e);
+                        }
+                    });
+        }
+    }
+
+    /**
+     * Gets file extension from a file path.
+     *
+     * @param path the file path
+     * @return the extension in lowercase, or null if no extension
+     */
+    private String getFileExtensionFromPath(String path) {
+        if (path == null || !path.contains(".")) {
+            return null;
+        }
+        int lastDot = path.lastIndexOf(".");
+        int lastSlash = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
+        if (lastDot > lastSlash) {
+            return path.substring(lastDot + 1).toLowerCase();
+        }
+        return null;
     }
 
     /**

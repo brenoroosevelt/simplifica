@@ -4,32 +4,45 @@
     <v-card variant="outlined" class="mb-4">
       <v-card-title class="text-subtitle-1 font-weight-medium">
         <v-icon class="mr-2">mdi-upload</v-icon>
-        Upload de Mapeamentos
+        Upload de Mapeamento (Bizagi)
       </v-card-title>
       <v-card-text>
+        <v-alert
+          type="info"
+          variant="tonal"
+          density="compact"
+          class="mb-4"
+        >
+          <div class="text-caption">
+            <strong>Instruções:</strong> Exporte o processo do Bizagi e compacte toda a pasta em um arquivo <strong>.zip</strong> antes de fazer o upload.
+          </div>
+        </v-alert>
+
         <v-file-input
-          v-model="selectedFiles"
-          label="Selecione arquivos HTML"
-          accept=".html"
-          multiple
-          prepend-icon="mdi-paperclip"
+          v-model="selectedFile"
+          label="Selecione o arquivo ZIP"
+          accept=".zip,application/zip"
+          prepend-icon="mdi-folder-zip"
           :show-size="1000"
           chips
           clearable
-          hint="Selecione um ou mais arquivos HTML de mapeamento"
+          hint="Arquivo ZIP contendo o export do Bizagi (máx. 50MB)"
           persistent-hint
+          variant="outlined"
+          density="compact"
+          @update:model-value="handleFileChange"
         />
 
         <div class="d-flex justify-end mt-4">
           <v-btn
             color="primary"
             variant="flat"
-            :disabled="!selectedFiles || selectedFiles.length === 0"
+            :disabled="!selectedFile || selectedFile.length === 0"
             :loading="uploading"
             @click="handleUpload"
           >
             <v-icon start>mdi-cloud-upload</v-icon>
-            Upload
+            Enviar arquivo
           </v-btn>
         </div>
       </v-card-text>
@@ -39,7 +52,7 @@
     <v-card variant="outlined">
       <v-card-title class="text-subtitle-1 font-weight-medium">
         <v-icon class="mr-2">mdi-file-tree-outline</v-icon>
-        Arquivos Carregados ({{ mappings.length }})
+        Mapeamento Atual {{ mappings.length > 0 ? '(1)' : '' }}
       </v-card-title>
       <v-card-text>
         <v-list v-if="mappings.length > 0" lines="two">
@@ -50,7 +63,7 @@
           >
             <template #prepend>
               <v-avatar color="primary" variant="tonal">
-                <v-icon>mdi-file-code</v-icon>
+                <v-icon>mdi-folder-zip</v-icon>
               </v-avatar>
             </template>
 
@@ -61,13 +74,13 @@
             <v-list-item-subtitle>
               <div class="d-flex flex-column" style="gap: 4px;">
                 <span>{{ formatFileSize(mapping.fileSize) }}</span>
-                <span class="text-caption">{{ formatDate(mapping.uploadedAt) }}</span>
+                <span class="text-caption">Enviado em {{ formatDate(mapping.uploadedAt) }}</span>
               </div>
             </v-list-item-subtitle>
 
             <template #append>
               <div class="d-flex align-center" style="gap: 8px;">
-                <v-tooltip text="Visualizar" location="top">
+                <v-tooltip text="Visualizar Mapeamento" location="top">
                   <template #activator="{ props: tooltipProps }">
                     <v-btn
                       v-bind="tooltipProps"
@@ -80,7 +93,7 @@
                   </template>
                 </v-tooltip>
 
-                <v-tooltip text="Excluir" location="top">
+                <v-tooltip text="Substituir Mapeamento" location="top">
                   <template #activator="{ props: tooltipProps }">
                     <v-btn
                       v-bind="tooltipProps"
@@ -99,52 +112,17 @@
 
         <div v-else class="text-center py-8">
           <v-icon size="64" color="grey-lighten-1" class="mb-4">
-            mdi-file-document-outline
+            mdi-folder-zip-outline
           </v-icon>
           <p class="text-body-1 text-medium-emphasis">
-            Nenhum arquivo de mapeamento carregado
+            Nenhum mapeamento carregado
           </p>
           <p class="text-caption text-medium-emphasis">
-            Faça upload de arquivos HTML para visualizar aqui
+            Faça upload de um arquivo ZIP exportado do Bizagi
           </p>
         </div>
       </v-card-text>
     </v-card>
-
-    <!-- Preview Dialog -->
-    <v-dialog
-      v-model="previewDialog"
-      fullscreen
-      transition="dialog-bottom-transition"
-    >
-      <v-card>
-        <v-toolbar color="primary">
-          <v-btn icon @click="closePreviewDialog">
-            <v-icon>mdi-close</v-icon>
-          </v-btn>
-          <v-toolbar-title>{{ selectedMapping?.filename }}</v-toolbar-title>
-          <v-spacer />
-          <v-btn
-            variant="text"
-            :href="selectedMapping?.fileUrl"
-            target="_blank"
-          >
-            <v-icon start>mdi-open-in-new</v-icon>
-            Abrir em Nova Aba
-          </v-btn>
-        </v-toolbar>
-
-        <v-card-text class="pa-0">
-          <iframe
-            v-if="selectedMapping"
-            :src="selectedMapping.fileUrl"
-            sandbox="allow-scripts allow-same-origin"
-            style="width: 100%; height: calc(100vh - 64px); border: none;"
-            title="Visualização do mapeamento"
-          />
-        </v-card-text>
-      </v-card>
-    </v-dialog>
 
     <!-- Delete Confirmation Dialog -->
     <v-dialog
@@ -199,8 +177,9 @@ interface Props {
 }
 
 interface Emits {
-  (_event: 'upload', _files: File[]): void
+  (_event: 'upload', _file: File): void
   (_event: 'delete', _mappingId: string): void
+  (_event: 'view', _mapping: ProcessMapping): void
 }
 
 withDefaults(defineProps<Props>(), {
@@ -211,27 +190,41 @@ withDefaults(defineProps<Props>(), {
 const emit = defineEmits<Emits>()
 
 // State
-const selectedFiles = ref<File[] | null>(null)
-const previewDialog = ref(false)
+const selectedFile = ref<File[] | null>(null)
 const deleteDialog = ref(false)
 const selectedMapping = ref<ProcessMapping | null>(null)
 
 // Methods
-const handleUpload = () => {
-  if (!selectedFiles.value || selectedFiles.value.length === 0) return
+const handleFileChange = (files: File[] | null) => {
+  // File change handled by v-model
+}
 
-  emit('upload', selectedFiles.value)
-  selectedFiles.value = null
+const handleUpload = () => {
+  if (!selectedFile.value) {
+    return
+  }
+
+  let file: File | undefined
+
+  if (Array.isArray(selectedFile.value)) {
+    if (selectedFile.value.length === 0) {
+      return
+    }
+    file = selectedFile.value[0]
+  } else {
+    file = selectedFile.value as unknown as File
+  }
+
+  if (!file) {
+    return
+  }
+
+  emit('upload', file)
+  selectedFile.value = null
 }
 
 const openPreviewDialog = (mapping: ProcessMapping) => {
-  selectedMapping.value = mapping
-  previewDialog.value = true
-}
-
-const closePreviewDialog = () => {
-  previewDialog.value = false
-  selectedMapping.value = null
+  emit('view', mapping)
 }
 
 const openDeleteDialog = (mapping: ProcessMapping) => {

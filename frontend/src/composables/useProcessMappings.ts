@@ -21,7 +21,7 @@ export function useProcessMappings(reloadCallback: () => Promise<void>) {
   }
 
   // Methods - Mappings Operations
-  async function uploadMappings(files: File[]): Promise<void> {
+  async function uploadMappings(file: File): Promise<void> {
     if (!selectedProcessForMappings.value) return
 
     uploadingMappings.value = true
@@ -29,12 +29,12 @@ export function useProcessMappings(reloadCallback: () => Promise<void>) {
     try {
       const updatedProcess = await processService.uploadMappings(
         selectedProcessForMappings.value.id,
-        files
+        file
       )
       selectedProcessForMappings.value = updatedProcess
       await reloadCallback()
     } catch (err) {
-      console.error('Failed to upload mappings:', err)
+      console.error('Failed to upload mapping:', err)
       throw err
     } finally {
       uploadingMappings.value = false

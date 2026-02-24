@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
@@ -39,7 +41,68 @@ public class FileController {
     private String basePath;
 
     /**
-     * Serves an uploaded file (original version).
+     * Serves an uploaded file with support for nested directories.
+     * Handles paths like: /processes/{processId}/index.html
+     *
+     * @param folder the top-level folder name (e.g., "processes")
+     * @param subPath the remaining path including subdirectories and filename
+     * @return the file as a response entity with appropriate content type
+     */
+    @GetMapping("/{folder}/**")
+    public ResponseEntity<Resource> serveNestedFile(
+            @PathVariable String folder,
+            jakarta.servlet.http.HttpServletRequest request) {
+
+        // Extract the full path after /{folder}/
+        String fullPath = request.getRequestURI();
+        String prefix = "/public/uploads/" + folder + "/";
+        String subPath = fullPath.substring(fullPath.indexOf(prefix) + prefix.length());
+
+        // URL decode the subPath to handle spaces and special characters
+        subPath = URLDecoder.decode(subPath, StandardCharsets.UTF_8);
+
+        log.info("Serving nested file: folder={}, subPath={}", folder, subPath);
+
+        // Security: Validate folder
+        if (!isValidPathSegment(folder)) {
+            log.warn("Invalid folder segment detected: {}", folder);
+            return ResponseEntity.notFound().build();
+        }
+
+        // Security: Validate each path segment in subPath
+        String[] segments = subPath.split("/");
+        for (String segment : segments) {
+            if (!isValidPathSegment(segment)) {
+                log.warn("Invalid path segment detected: {}", segment);
+                return ResponseEntity.notFound().build();
+            }
+        }
+
+        try {
+            Path filePath = Paths.get(basePath, folder, subPath).normalize();
+            Resource resource = loadFileAsResource(filePath);
+
+            MediaType mediaType = determineMediaType(filePath);
+
+            String filename = filePath.getFileName().toString();
+
+            return ResponseEntity.ok()
+                    .contentType(mediaType)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"")
+                    .body(resource);
+
+        } catch (InvalidPathException e) {
+            log.warn("Invalid path: folder={}, subPath={}", folder, subPath);
+            return ResponseEntity.notFound().build();
+        } catch (IOException e) {
+            log.warn("File not found: folder={}, subPath={}", folder, subPath);
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    /**
+     * Serves an uploaded file (original version) - legacy endpoint for backward compatibility.
+     * Use serveNestedFile for new implementations.
      *
      * @param folder the folder name (e.g., "institutions")
      * @param filename the file name
@@ -223,12 +286,22 @@ public class FileController {
 
         if (contentType == null) {
             String filename = filePath.getFileName().toString().toLowerCase();
-            if (filename.endsWith(".jpg") || filename.endsWith(".jpeg")) {
+            if (filename.endsWith(".html") || filename.endsWith(".htm")) {
+                return MediaType.TEXT_HTML;
+            } else if (filename.endsWith(".css")) {
+                return MediaType.parseMediaType("text/css");
+            } else if (filename.endsWith(".js")) {
+                return MediaType.parseMediaType("application/javascript");
+            } else if (filename.endsWith(".json")) {
+                return MediaType.APPLICATION_JSON;
+            } else if (filename.endsWith(".jpg") || filename.endsWith(".jpeg")) {
                 return MediaType.IMAGE_JPEG;
             } else if (filename.endsWith(".png")) {
                 return MediaType.IMAGE_PNG;
             } else if (filename.endsWith(".gif")) {
                 return MediaType.IMAGE_GIF;
+            } else if (filename.endsWith(".svg")) {
+                return MediaType.parseMediaType("image/svg+xml");
             } else if (filename.endsWith(".webp")) {
                 return MediaType.parseMediaType("image/webp");
             } else {

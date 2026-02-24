@@ -203,29 +203,30 @@ public class ProcessController {
     }
 
     /**
-     * Uploads multiple HTML mapping files for a process.
-     * Accepts multipart/form-data with one or more HTML files.
+     * Uploads a ZIP file containing Bizagi process mapping exports.
+     * Accepts multipart/form-data with a single ZIP file.
      *
-     * Each file is validated to ensure it's a valid HTML file:
-     * - MIME type must be text/html
-     * - File extension must be .html
-     * - File size must not exceed 10MB
-     * - File content must contain valid HTML tags
+     * The ZIP file is validated and extracted:
+     * - MIME type must be application/zip
+     * - File extension must be .zip
+     * - File size must not exceed 50MB
+     * - Extracted content must not exceed 100MB
+     * - Only safe file types are extracted (HTML, CSS, JS, images, etc.)
      *
-     * The uploaded files are stored in the "processes" folder and
-     * associated with the process as ProcessMapping entities.
+     * The ZIP contents are extracted to a unique directory and served publicly.
+     * Any existing mapping for the process is replaced.
      *
      * @param id the process UUID
-     * @param files list of HTML files to upload
-     * @return the updated process DTO with new mappings
+     * @param file the ZIP file containing Bizagi export
+     * @return the updated process DTO with new mapping
      */
     @PostMapping("/{id}/mappings")
     @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
     public ResponseEntity<ProcessDTO> uploadMappings(
             @PathVariable UUID id,
-            @RequestParam("files") List<MultipartFile> files) {
+            @RequestParam("file") MultipartFile file) {
 
-        ProcessDTO process = processService.uploadMappings(id, files);
+        ProcessDTO process = processService.uploadMappings(id, file);
         return ResponseEntity.ok(process);
     }
 

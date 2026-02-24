@@ -84,18 +84,27 @@ class ProcessService {
   }
 
   /**
-   * Upload de múltiplos arquivos HTML de mapeamento.
+   * Upload de arquivo ZIP contendo export do Bizagi.
+   * O ZIP é extraído e servido como mapeamento do processo.
    * @param processId ID do processo
-   * @param files Array de arquivos HTML
-   * @returns Promise com processo atualizado incluindo novos mappings
+   * @param file Arquivo ZIP contendo o export do Bizagi
+   * @returns Promise com processo atualizado incluindo novo mapping
    */
-  async uploadMappings(processId: string, files: File[]): Promise<Process> {
-    const formData = new FormData()
+  async uploadMappings(processId: string, file: File): Promise<Process> {
+    console.log('=== Upload Mappings Debug ===')
+    console.log('File:', file)
+    console.log('File name:', file?.name)
+    console.log('File size:', file?.size)
+    console.log('File type:', file?.type)
 
-    // Adiciona todos os arquivos ao FormData com a mesma chave
-    files.forEach(file => {
-      formData.append('files', file)
-    })
+    const formData = new FormData()
+    formData.append('file', file)
+
+    console.log('FormData entries:')
+    for (const pair of formData.entries()) {
+      console.log(pair[0], pair[1])
+    }
+    console.log('===========================')
 
     const response = await apiClient.post<Process>(
       `${this.BASE_PATH}/${processId}/mappings`,

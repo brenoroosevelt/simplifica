@@ -29,7 +29,7 @@
         @update:pagination="handlePageChange"
         @edit="openEditDialog"
         @delete="openDeleteDialog"
-        @view-mappings="openMappingsDialog"
+        @view-mappings="handleViewMappings"
       />
     </v-card>
 
@@ -92,6 +92,56 @@
             :deleting="deletingMapping"
             @upload="handleMappingsUpload"
             @delete="handleMappingDelete"
+            @view="handleMappingView"
+          />
+        </v-card-text>
+      </v-card>
+    </v-dialog>
+
+    <!-- Mapping Viewer Dialog (Fullscreen) -->
+    <v-dialog
+      v-model="mappingViewerDialog"
+      fullscreen
+      transition="dialog-bottom-transition"
+    >
+      <v-card>
+        <v-toolbar color="primary">
+          <v-btn icon @click="closeMappingViewer">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+          <v-toolbar-title>
+            <div class="d-flex flex-column">
+              <span>{{ selectedProcessForMappings?.name }}</span>
+              <span class="text-caption font-weight-regular" style="opacity: 0.8;">
+                {{ selectedProcessForMappings?.institutionName }}
+              </span>
+            </div>
+          </v-toolbar-title>
+          <v-spacer />
+          <v-btn
+            variant="text"
+            prepend-icon="mdi-pencil"
+            @click="openEditMapping"
+          >
+            Alterar
+          </v-btn>
+          <v-btn
+            variant="text"
+            :href="currentMappingUrl"
+            target="_blank"
+            prepend-icon="mdi-open-in-new"
+          >
+            Abrir em Nova Aba
+          </v-btn>
+        </v-toolbar>
+
+        <v-card-text class="pa-0">
+          <iframe
+            v-if="currentMappingUrl"
+            :src="currentMappingUrl"
+            sandbox="allow-scripts allow-same-origin"
+            style="width: 100%; height: calc(100vh - 64px); border: none;"
+            title="Visualização do mapeamento"
           />
         </v-card-text>
       </v-card>
@@ -169,7 +219,7 @@ import { useProcessList } from '@/composables/useProcessList'
 import { useProcessForm } from '@/composables/useProcessForm'
 import { useProcessMappings } from '@/composables/useProcessMappings'
 import { useProcessReferences } from '@/composables/useProcessReferences'
-import type { ProcessCreateRequest, ProcessUpdateRequest } from '@/types/process.types'
+import type { Process, ProcessCreateRequest, ProcessUpdateRequest } from '@/types/process.types'
 
 // Composables
 const { snackbar, showSnackbar } = useSnackbar()
@@ -221,6 +271,45 @@ const {
 // Refs for child components
 const mappingUploadRef = ref<InstanceType<typeof ProcessMappingUpload> | null>(null)
 
+// Mapping Viewer state
+const mappingViewerDialog = ref(false)
+const currentMappingUrl = ref<string | null>(null)
+
+// Mapping Viewer methods
+function openMappingViewer(url: string) {
+  currentMappingUrl.value = url
+  mappingViewerDialog.value = true
+}
+
+function closeMappingViewer() {
+  mappingViewerDialog.value = false
+  currentMappingUrl.value = null
+  selectedProcessForMappings.value = null
+}
+
+function openEditMapping() {
+  // Close viewer and open upload dialog, keeping selectedProcessForMappings
+  mappingViewerDialog.value = false
+  currentMappingUrl.value = null
+  // Don't clear selectedProcessForMappings - keep it for the upload modal
+  mappingsDialog.value = true
+}
+
+// Override openMappingsDialog to decide which modal to open
+function handleViewMappings(process: any) {
+  selectedProcessForMappings.value = process
+
+  // Check if process has mappings
+  if (process.mappings && process.mappings.length > 0) {
+    // Has mapping - open viewer directly
+    const mapping = process.mappings[0]
+    openMappingViewer(mapping.fileUrl)
+  } else {
+    // No mapping - open upload dialog
+    openMappingsDialog(process)
+  }
+}
+
 // Wrapper functions to handle errors and show feedback
 async function handleFormSubmit(data: ProcessCreateRequest | ProcessUpdateRequest): Promise<void> {
   try {
@@ -245,12 +334,12 @@ async function handleDelete(): Promise<void> {
   }
 }
 
-async function handleMappingsUpload(files: File[]): Promise<void> {
+async function handleMappingsUpload(file: File): Promise<void> {
   try {
-    await uploadMappings(files)
-    showSnackbar(`${files.length} arquivo(s) enviado(s) com sucesso`, 'success')
+    await uploadMappings(file)
+    showSnackbar('Mapeamento do Bizagi enviado e extraído com sucesso', 'success')
   } catch (err) {
-    const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Erro ao fazer upload dos mapeamentos'
+    const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Erro ao fazer upload do mapeamento'
     showSnackbar(message, 'error')
   }
 }
@@ -264,6 +353,13 @@ async function handleMappingDelete(mappingId: string): Promise<void> {
     const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Erro ao excluir mapeamento'
     showSnackbar(message, 'error')
   }
+}
+
+function handleMappingView(mapping: any): void {
+  // Close the upload dialog without clearing selectedProcessForMappings
+  // so the viewer can display process name and institution
+  mappingsDialog.value = false
+  openMappingViewer(mapping.fileUrl)
 }
 
 // Lifecycle

@@ -113,6 +113,13 @@
             <version>${spring-dotenv.version}</version>
         </dependency>
 
+        <!-- Apache Commons Compress for ZIP handling -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-compress</artifactId>
+            <version>1.26.0</version>
+        </dependency>
+
         <!-- DevTools -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

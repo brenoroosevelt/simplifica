@@ -79,6 +79,11 @@ public class SecurityConfig {
                 // CSRF disabled for stateless API
                 .csrf(AbstractHttpConfigurer::disable)
 
+                // Frame options - disable for public uploads to allow iframe preview from frontend
+                .headers(headers -> headers
+                        .frameOptions(frameOptions -> frameOptions.disable())
+                )
+
                 // Session management - IF_REQUIRED for OAuth2 flow
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
