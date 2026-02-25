@@ -51,20 +51,6 @@ public class TrainingDTO {
             return null;
         }
 
-        // Calculate thumbnail URL from cover image URL
-        String coverImageUrl = training.getCoverImageUrl();
-        String thumbnailUrl = null;
-        if (coverImageUrl != null && !coverImageUrl.isEmpty()) {
-            // Insert "/thumbnails/" before the filename
-            // Example: /uploads/trainings/file.jpg -> /uploads/trainings/thumbnails/file.jpg
-            int lastSlashIndex = coverImageUrl.lastIndexOf('/');
-            if (lastSlashIndex != -1) {
-                String basePath = coverImageUrl.substring(0, lastSlashIndex);
-                String filename = coverImageUrl.substring(lastSlashIndex + 1);
-                thumbnailUrl = basePath + "/thumbnails/" + filename;
-            }
-        }
-
         TrainingDTOBuilder builder = TrainingDTO.builder()
                 .id(training.getId())
                 .institutionId(training.getInstitution().getId())
@@ -73,8 +59,8 @@ public class TrainingDTO {
                 .title(training.getTitle())
                 .description(training.getDescription())
                 .content(training.getContent())
-                .coverImageUrl(coverImageUrl)
-                .coverImageThumbnailUrl(thumbnailUrl)
+                .coverImageUrl(training.getCoverImageUrl())
+                .coverImageThumbnailUrl(training.getCoverImageThumbnailUrl())
                 .videoCount(training.getVideoCount())
                 .totalDurationMinutes(training.getTotalDurationMinutes())
                 .active(training.isActive())

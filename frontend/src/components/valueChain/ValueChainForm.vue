@@ -93,14 +93,7 @@
 
       <!-- Active Field -->
       <v-col cols="12" md="4">
-        <v-select
-          v-model="formData.active"
-          label="Status *"
-          :items="statusOptions"
-          :rules="[rules.required]"
-          prepend-inner-icon="mdi-check-circle"
-          required
-        />
+        <ActiveSwitch v-model="formData.active" />
       </v-col>
 
       <!-- Form Actions -->
@@ -131,6 +124,7 @@
 import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { useInstitutionStore } from '@/stores/institution.store'
 import type { ValueChain, ValueChainCreateRequest, ValueChainUpdateRequest } from '@/types/valueChain.types'
+import ActiveSwitch from '@/components/common/ActiveSwitch.vue'
 
 interface Props {
   valueChain?: ValueChain
@@ -158,6 +152,7 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
 const isValid = ref(false)
 const imagePreview = ref<string | null>(null)
 const imageFile = ref<File | null>(null)
+const imageRemoved = ref(false)
 
 // Computed
 const isEditMode = computed(() => !!props.valueChain)
@@ -178,17 +173,11 @@ const initialData = ref<string>('')
 
 const hasChanges = computed(() => {
   if (!isEditMode.value) {
-    return true // For create mode, always allow submission if valid
+    return true
   }
   const currentData = JSON.stringify(formData)
-  return currentData !== initialData.value || !!imageFile.value
+  return currentData !== initialData.value || !!imageFile.value || imageRemoved.value
 })
-
-// Options for selects
-const statusOptions = [
-  { title: 'Ativa', value: true },
-  { title: 'Inativa', value: false },
-]
 
 // Validation Rules
 const rules = {
@@ -234,6 +223,9 @@ const handleImageSelect = (event: Event) => {
 }
 
 const handleImageRemove = () => {
+  if (props.valueChain?.imageUrl && !imageFile.value) {
+    imageRemoved.value = true
+  }
   imageFile.value = null
   imagePreview.value = null
   if (fileInputRef.value) {
@@ -246,19 +238,18 @@ const handleSubmit = () => {
   if (!isValid.value) return
 
   if (isEditMode.value) {
-    const updateData: ValueChainUpdateRequest = {}
+    const updateData: any = {
+      name: formData.name,
+      description: formData.description || undefined,
+      active: formData.active,
+    }
 
-    if (formData.name !== props.valueChain!.name) {
-      updateData.name = formData.name
-    }
-    if (formData.description !== (props.valueChain!.description || '')) {
-      updateData.description = formData.description || undefined
-    }
-    if (formData.active !== props.valueChain!.active) {
-      updateData.active = formData.active
-    }
     if (imageFile.value) {
       updateData.image = imageFile.value
+    }
+
+    if (imageRemoved.value) {
+      updateData.removeImage = true
     }
 
     emit('submit', updateData)
@@ -292,6 +283,7 @@ const resetForm = () => {
   }
 
   imageFile.value = null
+  imageRemoved.value = false
   if (fileInputRef.value) {
     fileInputRef.value.value = ''
   }
@@ -328,6 +320,7 @@ watch(
       }
 
       imageFile.value = null
+      imageRemoved.value = false
       initialData.value = JSON.stringify(formData)
     } else {
       resetForm()

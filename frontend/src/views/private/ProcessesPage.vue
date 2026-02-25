@@ -36,13 +36,23 @@
     <!-- Create/Edit Dialog -->
     <v-dialog
       v-model="formDialog"
-      max-width="900"
+      :fullscreen="formDialogFullscreen"
+      :max-width="formDialogFullscreen ? undefined : 900"
       persistent
       scrollable
     >
       <v-card>
-        <v-card-title class="text-h6 font-weight-medium pa-5">
-          {{ isEditMode ? 'Alterar Processo' : 'Novo Processo' }}
+        <v-card-title class="d-flex align-center pa-5">
+          <span class="text-h6 font-weight-medium">
+            {{ isEditMode ? 'Alterar Processo' : 'Novo Processo' }}
+          </span>
+          <v-spacer />
+          <v-btn
+            :icon="formDialogFullscreen ? 'mdi-fullscreen-exit' : 'mdi-fullscreen'"
+            variant="text"
+            size="small"
+            @click="formDialogFullscreen = !formDialogFullscreen"
+          />
         </v-card-title>
 
         <v-card-text class="pa-6">
@@ -274,6 +284,7 @@ const mappingUploadRef = ref<InstanceType<typeof ProcessMappingUpload> | null>(n
 // Mapping Viewer state
 const mappingViewerDialog = ref(false)
 const currentMappingUrl = ref<string | null>(null)
+const formDialogFullscreen = ref(false)
 
 // Mapping Viewer methods
 function openMappingViewer(url: string) {

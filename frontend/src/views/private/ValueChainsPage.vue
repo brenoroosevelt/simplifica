@@ -240,7 +240,11 @@ async function handleFormSubmit(data: ValueChainCreateRequest | ValueChainUpdate
 
   try {
     if (isEditMode.value && selectedValueChain.value) {
-      await valueChainService.update(selectedValueChain.value.id, data as ValueChainUpdateRequest)
+      const { removeImage, ...updateData } = data as ValueChainUpdateRequest & { removeImage?: boolean }
+      if (removeImage) {
+        await valueChainService.deleteImage(selectedValueChain.value.id)
+      }
+      await valueChainService.update(selectedValueChain.value.id, updateData)
       showSnackbar('Cadeia de valor atualizada com sucesso', 'success')
     } else {
       await valueChainService.create(data as ValueChainCreateRequest)

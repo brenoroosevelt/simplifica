@@ -28,10 +28,21 @@ export function useTrainingForm() {
     }
   }
 
-  async function createTraining(data: TrainingCreateRequest): Promise<Training> {
+  async function createTraining(data: TrainingCreateRequest & { image?: File }): Promise<Training> {
     isSaving.value = true
     try {
-      const created = await trainingService.create(data)
+      const { image, ...trainingData } = data
+
+      // Create training first
+      const created = await trainingService.create(trainingData)
+
+      // Upload image if provided
+      if (image) {
+        const withImage = await trainingService.uploadCoverImage(created.id, image)
+        training.value = withImage
+        return withImage
+      }
+
       training.value = created
       return created
     } catch (err) {
@@ -42,10 +53,25 @@ export function useTrainingForm() {
     }
   }
 
-  async function updateTraining(id: string, data: TrainingUpdateRequest): Promise<Training> {
+  async function updateTraining(id: string, data: TrainingUpdateRequest & { image?: File }): Promise<Training> {
     isSaving.value = true
     try {
-      const updated = await trainingService.update(id, data)
+      const { image, ...trainingData } = data
+
+      // Update training first (if there are changes)
+      let updated: Training
+      if (Object.keys(trainingData).length > 0) {
+        updated = await trainingService.update(id, trainingData)
+      } else {
+        // If no data changes, just fetch current training
+        updated = await trainingService.getById(id)
+      }
+
+      // Upload image if provided
+      if (image) {
+        updated = await trainingService.uploadCoverImage(id, image)
+      }
+
       training.value = updated
       return updated
     } catch (err) {

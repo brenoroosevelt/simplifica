@@ -33,14 +33,7 @@
 
       <!-- Active Field -->
       <v-col cols="12" md="6">
-        <v-select
-          v-model="formData.active"
-          label="Status *"
-          :items="statusOptions"
-          :rules="[rules.required]"
-          prepend-inner-icon="mdi-check-circle"
-          required
-        />
+        <ActiveSwitch v-model="formData.active" />
       </v-col>
 
       <!-- Institution Field (Read-only) -->
@@ -97,6 +90,7 @@
 import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { useInstitutionStore } from '@/stores/institution.store'
 import type { Unit, UnitCreateRequest, UnitUpdateRequest } from '@/types/unit.types'
+import ActiveSwitch from '@/components/common/ActiveSwitch.vue'
 
 interface Props {
   unit?: Unit
@@ -150,12 +144,6 @@ const hasChanges = computed(() => {
   return currentData !== initialData.value
 })
 
-// Options for selects
-const statusOptions = [
-  { title: 'Ativa', value: true },
-  { title: 'Inativa', value: false },
-]
-
 // Validation Rules
 const rules = {
   required: (v: unknown) => !!v || 'Campo obrigatório',
@@ -181,16 +169,10 @@ const handleSubmit = () => {
   if (!isValid.value) return
 
   if (isEditMode.value) {
-    const updateData: UnitUpdateRequest = {}
-
-    if (formData.name !== props.unit!.name) {
-      updateData.name = formData.name
-    }
-    if (formData.description !== (props.unit!.description || '')) {
-      updateData.description = formData.description || undefined
-    }
-    if (formData.active !== props.unit!.active) {
-      updateData.active = formData.active
+    const updateData: UnitUpdateRequest = {
+      name: formData.name,
+      description: formData.description || undefined,
+      active: formData.active,
     }
 
     emit('submit', updateData)

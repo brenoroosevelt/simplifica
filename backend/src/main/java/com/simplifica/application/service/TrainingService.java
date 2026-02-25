@@ -67,7 +67,7 @@ public class TrainingService {
     private InstitutionService institutionService;
 
     @Autowired
-    private FileStorageService fileStorageService;
+    private com.simplifica.storage.service.StorageService storageService;
 
     /**
      * Gets the current institution ID from TenantContext.
@@ -272,10 +272,12 @@ public class TrainingService {
         training.setActive(false);
         trainingRepository.save(training);
 
-        // Delete cover image if exists
-        if (training.getCoverImageUrl() != null) {
-            fileStorageService.deleteFile(training.getCoverImageUrl());
-        }
+        // Delete cover image using new storage adapter system
+        storageService.deleteByEntityAndCategory(
+                "Training",
+                id,
+                com.simplifica.storage.domain.FileCategory.TRAINING_COVER
+        );
 
         LOGGER.info("Training {} deleted successfully", id);
     }
@@ -283,9 +285,13 @@ public class TrainingService {
     /**
      * Uploads a cover image for a training.
      *
+     * This method uses the new storage adapter system (Flysystem-style)
+     * which supports local filesystem, Dropbox, and Google Drive.
+     * The storage provider is configured via STORAGE_PROVIDER environment variable.
+     *
      * @param id the training UUID
-     * @param file the image file
-     * @return the updated training DTO
+     * @param file the cover image file
+     * @return the updated training DTO with image URLs
      * @throws ResourceNotFoundException if the training is not found
      * @throws BadRequestException if file validation fails
      */
@@ -294,28 +300,42 @@ public class TrainingService {
         UUID institutionId = getCurrentInstitutionId();
         LOGGER.info("Uploading cover image for training {} for institution {}", id, institutionId);
 
+        // Find and validate training
         Training training = trainingRepository.findByIdAndInstitutionId(id, institutionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Training not found with id: " + id));
 
         validateTenantAccess(training);
 
-        // Delete old cover image if exists
-        if (training.getCoverImageUrl() != null) {
-            fileStorageService.deleteFile(training.getCoverImageUrl());
-        }
+        // Delete old images if they exist
+        storageService.deleteByEntityAndCategory(
+                "Training",
+                id,
+                com.simplifica.storage.domain.FileCategory.TRAINING_COVER
+        );
 
-        // Upload new cover image
-        FileStorageService.FileUploadResult uploadResult = fileStorageService.storeImage(file, "trainings");
-        training.setCoverImageUrl(uploadResult.getFileUrl());
+        // Upload new image with thumbnail generation using storage adapters
+        com.simplifica.storage.service.StorageService.FileUploadResult uploadResult =
+                storageService.storeFile(
+                        file,
+                        "Training",
+                        id,
+                        com.simplifica.storage.domain.FileCategory.TRAINING_COVER,
+                        true // generate thumbnail
+                );
 
+        // Update training with new image URLs
+        training.setImageUrls(uploadResult.fileUrl(), uploadResult.thumbnailUrl());
         Training updatedTraining = trainingRepository.save(training);
-        LOGGER.info("Cover image uploaded successfully for training {}", id);
 
+        LOGGER.info("Cover image uploaded successfully for training {}", id);
         return TrainingDTO.fromEntity(updatedTraining);
     }
 
     /**
      * Deletes the cover image of a training.
+     *
+     * This method uses the new storage adapter system (Flysystem-style)
+     * which supports local filesystem, Dropbox, and Google Drive.
      *
      * @param id the training UUID
      * @return the updated training DTO
@@ -331,11 +351,16 @@ public class TrainingService {
 
         validateTenantAccess(training);
 
-        if (training.getCoverImageUrl() != null) {
-            fileStorageService.deleteFile(training.getCoverImageUrl());
-            training.setCoverImageUrl(null);
-            trainingRepository.save(training);
-        }
+        // Delete using new storage adapter system
+        storageService.deleteByEntityAndCategory(
+                "Training",
+                id,
+                com.simplifica.storage.domain.FileCategory.TRAINING_COVER
+        );
+
+        // Clear image URLs
+        training.setImageUrls(null, null);
+        trainingRepository.save(training);
 
         LOGGER.info("Cover image deleted successfully for training {}", id);
 

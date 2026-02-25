@@ -235,14 +235,7 @@
 
       <!-- Active Field -->
       <v-col cols="12" md="6">
-        <v-select
-          v-model="formData.active"
-          label="Status *"
-          :items="statusOptions"
-          :rules="[rules.required]"
-          prepend-inner-icon="mdi-check-circle"
-          required
-        />
+        <ActiveSwitch v-model="formData.active" />
       </v-col>
 
       <!-- Form Actions -->
@@ -272,6 +265,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { useInstitutionStore } from '@/stores/institution.store'
+import ActiveSwitch from '@/components/common/ActiveSwitch.vue'
 import type {
   Process,
   ProcessCreateRequest,
@@ -363,12 +357,6 @@ const hasChanges = computed(() => {
   return currentData !== initialData.value
 })
 
-// Options for selects
-const statusOptions = [
-  { title: 'Ativo', value: true },
-  { title: 'Inativo', value: false },
-]
-
 const documentationStatusOptions = [
   { title: 'Documentado', value: 'DOCUMENTED' },
   { title: 'Não Documentado', value: 'NOT_DOCUMENTED' },
@@ -412,37 +400,24 @@ const handleSubmit = () => {
   if (!isValid.value) return
 
   if (isEditMode.value && props.process) {
-    // Helper function to detect changes
-    const getChangedFields = <T extends Record<string, any>>(
-      current: T,
-      original: Partial<T>
-    ): Partial<T> => {
-      const changed: Partial<T> = {}
-
-      for (const key in current) {
-        const currentValue = current[key]
-        const originalValue = original[key]
-
-        // Normalize empty strings to undefined for comparison
-        const normalizedCurrent = currentValue === '' ? undefined : currentValue
-        const normalizedOriginal = originalValue === '' || originalValue === null ? undefined : originalValue
-
-        if (normalizedCurrent !== normalizedOriginal) {
-          changed[key] = normalizedCurrent
-        }
-      }
-
-      return changed
+    const updateData: ProcessUpdateRequest = {
+      name: formData.name,
+      valueChainId: formData.valueChainId || undefined,
+      responsibleUnitId: formData.responsibleUnitId || undefined,
+      directUnitId: formData.directUnitId || undefined,
+      description: formData.description || undefined,
+      isCritical: formData.isCritical,
+      documentationStatus: formData.documentationStatus || undefined,
+      documentationUrl: formData.documentationUrl || undefined,
+      externalGuidanceStatus: formData.externalGuidanceStatus || undefined,
+      externalGuidanceUrl: formData.externalGuidanceUrl || undefined,
+      riskManagementStatus: formData.riskManagementStatus || undefined,
+      riskManagementUrl: formData.riskManagementUrl || undefined,
+      mappingStatus: formData.mappingStatus || undefined,
+      active: formData.active,
     }
 
-    const updateData = getChangedFields(formData, props.process)
-
-    if (Object.keys(updateData).length === 0) {
-      emit('cancel')
-      return
-    }
-
-    emit('submit', updateData as ProcessUpdateRequest)
+    emit('submit', updateData)
   } else {
     const createData: ProcessCreateRequest = {
       name: formData.name,

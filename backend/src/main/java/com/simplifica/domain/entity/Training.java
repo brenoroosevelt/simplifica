@@ -60,6 +60,9 @@ public class Training {
     @Column(name = "cover_image_url", length = 1024)
     private String coverImageUrl;
 
+    @Column(name = "cover_image_thumbnail_url", length = 1024)
+    private String coverImageThumbnailUrl;
+
     @OneToMany(mappedBy = "training", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<TrainingVideo> videos = new ArrayList<>();
@@ -133,5 +136,16 @@ public class Training {
                 .filter(v -> v.getDurationMinutes() != null)
                 .mapToInt(TrainingVideo::getDurationMinutes)
                 .sum();
+    }
+
+    /**
+     * Sets both cover image URLs.
+     *
+     * @param coverImageUrl the cover image URL
+     * @param thumbnailUrl the thumbnail URL
+     */
+    public void setImageUrls(String coverImageUrl, String thumbnailUrl) {
+        this.coverImageUrl = coverImageUrl;
+        this.coverImageThumbnailUrl = thumbnailUrl;
     }
 }

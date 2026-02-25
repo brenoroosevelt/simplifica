@@ -33,8 +33,6 @@
         :loading="isSaving"
         @submit="handleFormSubmit"
         @cancel="handleCancel"
-        @upload-cover="handleCoverUpload"
-        @delete-cover="handleCoverDelete"
       />
 
       <!-- Divider -->
@@ -43,7 +41,7 @@
       <!-- Video Manager (without card wrapper) -->
       <training-video-manager
         :videos="localVideos"
-        :training-id="isEditMode ? trainingId.value : undefined"
+        :training-id="isEditMode ? trainingId : undefined"
         @add="handleVideoAdd"
         @update="handleVideoUpdate"
         @delete="handleVideoDelete"
@@ -65,7 +63,7 @@
           prepend-icon="mdi-content-save"
           @click="handleSaveClick"
           :loading="isSaving"
-          :disabled="isLoading"
+          :disabled="isLoading || (isEditMode && !trainingFormRef?.hasChanges)"
         >
           Salvar Alterações
         </v-btn>
@@ -176,7 +174,17 @@ const handleFormSubmit = async (data: TrainingUpdateRequest | TrainingCreateRequ
     if (isEditMode.value && editComposable.value) {
       // Edit mode
       isSaving.value = true
-      await editComposable.value.updateTraining(data as TrainingUpdateRequest)
+
+      const { image, removeImage, ...trainingData } = data as TrainingUpdateRequest & { image?: File; removeImage?: boolean }
+
+      await editComposable.value.updateTraining(trainingData)
+
+      if (removeImage) {
+        await editComposable.value.deleteCoverImage()
+      } else if (image) {
+        await editComposable.value.uploadCoverImage(image)
+      }
+
       showSnackbar('Capacitação atualizada com sucesso!')
       setTimeout(() => {
         editComposable.value?.navigateToDetail()
@@ -219,34 +227,6 @@ const handleFormSubmit = async (data: TrainingUpdateRequest | TrainingCreateRequ
     const message = err.response?.data?.message ||
       (isCreationMode.value ? 'Erro ao criar capacitação' : 'Erro ao atualizar capacitação')
     showSnackbar(message, 'error')
-  } finally {
-    isSaving.value = false
-  }
-}
-
-const handleCoverUpload = async (file: File) => {
-  if (!isEditMode.value || !editComposable.value) return
-
-  try {
-    isSaving.value = true
-    await editComposable.value.uploadCoverImage(file)
-    showSnackbar('Capa atualizada com sucesso!')
-  } catch (err: any) {
-    showSnackbar(err.response?.data?.message || 'Erro ao fazer upload da capa', 'error')
-  } finally {
-    isSaving.value = false
-  }
-}
-
-const handleCoverDelete = async () => {
-  if (!isEditMode.value || !editComposable.value) return
-
-  try {
-    isSaving.value = true
-    await editComposable.value.deleteCoverImage()
-    showSnackbar('Capa removida com sucesso!')
-  } catch (err: any) {
-    showSnackbar(err.response?.data?.message || 'Erro ao remover capa', 'error')
   } finally {
     isSaving.value = false
   }
