@@ -194,6 +194,37 @@ public class GoogleDriveStorageAdapter implements StorageAdapter {
         return "googledrive";
     }
 
+    @Override
+    public void deleteDirectory(String prefix) throws StorageException {
+        try {
+            String[] parts = prefix.split("/");
+            String currentParentId = baseFolderId;
+
+            for (String part : parts) {
+                String query = String.format(
+                    "name='%s' and '%s' in parents and trashed=false",
+                    part.replace("'", "\\'"), currentParentId);
+
+                FileList result = driveService.files().list()
+                    .setQ(query)
+                    .setFields("files(id)")
+                    .execute();
+
+                List<File> files = result.getFiles();
+                if (files == null || files.isEmpty()) {
+                    return; // Not found, nothing to delete
+                }
+                currentParentId = files.get(0).getId();
+            }
+
+            driveService.files().delete(currentParentId).execute();
+            LOGGER.debug("Directory deleted from Google Drive: {}", prefix);
+
+        } catch (IOException e) {
+            throw new StorageException("Failed to delete directory from Google Drive: " + prefix, e);
+        }
+    }
+
     private String getOrCreateFolder(String parentId, String folderName) throws IOException {
         // Check cache
         String cacheKey = (parentId != null ? parentId : "root") + "/" + folderName;

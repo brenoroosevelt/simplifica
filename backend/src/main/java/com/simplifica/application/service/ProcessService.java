@@ -77,7 +77,7 @@ public class ProcessService {
     private UnitRepository unitRepository;
 
     @Autowired
-    private FileStorageService fileStorageService;
+    private ProcessMappingStorageService processMappingStorageService;
 
     /**
      * Gets the current institution ID from TenantContext.
@@ -483,21 +483,23 @@ public class ProcessService {
         if (!process.getMappings().isEmpty()) {
             LOGGER.info("Deleting {} existing mapping(s) for process {}", process.getMappings().size(), processId);
             List<ProcessMapping> existingMappings = new ArrayList<>(process.getMappings());
-            for (ProcessMapping mapping : existingMappings) {
-                fileStorageService.deleteFile(mapping.getFileUrl());
-                process.removeMapping(mapping);
+            for (ProcessMapping existingMapping : existingMappings) {
+                process.removeMapping(existingMapping);
             }
             processMappingRepository.deleteAll(existingMappings);
         }
 
-        // Extract and store ZIP file
-        FileStorageService.FileUploadResult uploadResult =
-                fileStorageService.storeZipFile(file, "processes", processId);
+        // Delete all stored files for this process from the storage adapter
+        processMappingStorageService.deleteAll(processId);
+
+        // Extract and store ZIP file via storage adapter
+        String indexHtmlPath = processMappingStorageService.storeZip(file, processId);
+        String proxyFileUrl = "/public/process-mappings/" + processId + "/" + indexHtmlPath;
 
         // Create ProcessMapping entity for the extracted content
         ProcessMapping mapping = ProcessMapping.builder()
                 .process(process)
-                .fileUrl(uploadResult.getFileUrl())
+                .fileUrl(proxyFileUrl)
                 .filename(file.getOriginalFilename())  // Keep original ZIP filename for reference
                 .fileSize(file.getSize())
                 .build();
@@ -541,8 +543,8 @@ public class ProcessService {
             throw new BadRequestException("The specified mapping does not belong to this process");
         }
 
-        // Delete file from storage
-        fileStorageService.deleteFile(mapping.getFileUrl());
+        // Delete all stored files for this process from the storage adapter
+        processMappingStorageService.deleteAll(processId);
 
         // Remove mapping from process and delete from database
         process.removeMapping(mapping);

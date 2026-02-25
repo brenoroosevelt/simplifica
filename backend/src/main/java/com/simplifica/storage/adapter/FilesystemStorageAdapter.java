@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.Comparator;
 
 /**
  * Filesystem storage adapter (default/local).
@@ -96,5 +97,23 @@ public class FilesystemStorageAdapter implements StorageAdapter {
     @Override
     public String getAdapterType() {
         return "filesystem";
+    }
+
+    @Override
+    public void deleteDirectory(String prefix) throws StorageException {
+        Path dirPath = Paths.get(rootPath, prefix);
+        if (!Files.exists(dirPath)) {
+            return;
+        }
+        try {
+            Files.walk(dirPath)
+                .sorted(Comparator.reverseOrder())
+                .forEach(p -> {
+                    try { Files.delete(p); } catch (IOException e) { LOGGER.warn("Failed to delete: {}", p, e); }
+                });
+            LOGGER.debug("Directory deleted: {}", prefix);
+        } catch (IOException e) {
+            throw new StorageException("Failed to delete directory: " + prefix, e);
+        }
     }
 }

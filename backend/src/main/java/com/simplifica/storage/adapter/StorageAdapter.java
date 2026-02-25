@@ -64,4 +64,15 @@ public interface StorageAdapter {
      * @return adapter type (e.g., "filesystem", "dropbox", "googledrive")
      */
     String getAdapterType();
+
+    /**
+     * Deletes all files under a given path prefix (directory).
+     * Used for bulk deletion of process mapping files.
+     *
+     * @param prefix the directory prefix (e.g., "processes/{processId}")
+     * @throws StorageException if deletion fails
+     */
+    default void deleteDirectory(String prefix) throws StorageException {
+        // Default no-op — implementations override for actual deletion
+    }
 }

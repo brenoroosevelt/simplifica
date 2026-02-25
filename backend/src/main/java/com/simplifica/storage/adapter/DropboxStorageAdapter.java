@@ -134,6 +134,20 @@ public class DropboxStorageAdapter implements StorageAdapter {
         return "dropbox";
     }
 
+    @Override
+    public void deleteDirectory(String prefix) throws StorageException {
+        String fullPath = getFullPath(prefix);
+        try {
+            client.files().deleteV2(fullPath);
+            LOGGER.debug("Directory deleted from Dropbox: {}", fullPath);
+        } catch (DbxException e) {
+            if (e.getMessage() != null && e.getMessage().contains("not_found")) {
+                return; // Already gone
+            }
+            throw new StorageException("Failed to delete directory from Dropbox: " + prefix, e);
+        }
+    }
+
     private String getFullPath(String path) {
         // Ensure path starts with /
         String normalizedPath = path.startsWith("/") ? path : "/" + path;

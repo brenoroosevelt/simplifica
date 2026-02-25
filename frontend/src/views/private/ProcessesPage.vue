@@ -231,6 +231,15 @@ import { useProcessMappings } from '@/composables/useProcessMappings'
 import { useProcessReferences } from '@/composables/useProcessReferences'
 import type { Process, ProcessCreateRequest, ProcessUpdateRequest } from '@/types/process.types'
 
+// Resolve file URLs to absolute backend URLs (avoid Vite public dir interception)
+// VITE_API_BASE_URL is e.g. "http://localhost:8080/api" — use it as prefix since
+// the backend context-path is /api and fileUrl is relative (e.g. /public/process-mappings/...)
+const BACKEND_BASE = (import.meta.env.VITE_API_BASE_URL as string).replace(/\/$/, '')
+function resolveFileUrl(url: string): string {
+  if (!url || url.startsWith('http')) return url
+  return BACKEND_BASE + url
+}
+
 // Composables
 const { snackbar, showSnackbar } = useSnackbar()
 
@@ -314,7 +323,7 @@ function handleViewMappings(process: any) {
   if (process.mappings && process.mappings.length > 0) {
     // Has mapping - open viewer directly
     const mapping = process.mappings[0]
-    openMappingViewer(mapping.fileUrl)
+    openMappingViewer(resolveFileUrl(mapping.fileUrl))
   } else {
     // No mapping - open upload dialog
     openMappingsDialog(process)
@@ -370,7 +379,7 @@ function handleMappingView(mapping: any): void {
   // Close the upload dialog without clearing selectedProcessForMappings
   // so the viewer can display process name and institution
   mappingsDialog.value = false
-  openMappingViewer(mapping.fileUrl)
+  openMappingViewer(resolveFileUrl(mapping.fileUrl))
 }
 
 // Lifecycle

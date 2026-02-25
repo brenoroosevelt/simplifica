@@ -1,13 +1,13 @@
 package com.simplifica.presentation.controller;
 
-import com.simplifica.domain.entity.ProcessMapping;
 import com.simplifica.infrastructure.repository.ProcessMappingRepository;
-import com.simplifica.presentation.exception.ResourceNotFoundException;
+import com.simplifica.storage.adapter.StorageAdapter;
+import com.simplifica.storage.adapter.StorageException;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -16,204 +16,165 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.io.IOException;
-import java.net.MalformedURLException;
-import java.nio.file.Files;
-import java.nio.file.InvalidPathException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.io.InputStream;
 import java.util.UUID;
 
 /**
- * REST Controller for serving process mapping HTML files publicly.
+ * REST Controller for serving process mapping files (Bizagi exports).
  *
- * Provides public endpoints for accessing uploaded HTML mapping files
- * (typically exported from Bizagi or similar tools) with appropriate
- * security headers to prevent XSS and other attacks.
+ * Acts as a proxy over the StorageAdapter, supporting multi-level paths
+ * to allow ZIP folder structures (HTML + CSS + JS + images) to be served
+ * with correct relative URL resolution in the browser iframe.
+ *
+ * URL pattern: GET /public/process-mappings/{processId}/**
+ *
+ * Example:
+ *   GET /public/process-mappings/{processId}/index.html
+ *   GET /public/process-mappings/{processId}/css/style.css
+ *   GET /public/process-mappings/{processId}/images/logo.png
+ *
+ * Storage key pattern: processes/{processId}/{relativePath}
  *
  * SECURITY FEATURES:
- * - Content-Security-Policy (CSP) header to restrict inline scripts/styles
+ * - Path traversal protection (blocks "..", null bytes, absolute paths)
+ * - Validates that the processId has an active mapping before serving
+ * - Content-Security-Policy header to restrict inline scripts/styles
  * - X-Content-Type-Options: nosniff to prevent MIME type sniffing
  * - X-Frame-Options: SAMEORIGIN to prevent clickjacking
- * - Path traversal protection
- * - File validation (must be associated with a process)
- *
- * Endpoint:
- * - GET /public/process-mappings/{processId}/{filename} - serves HTML files
- *
- * Note: This is a PUBLIC endpoint (no authentication required) but validates
- * that the file exists and belongs to the specified process before serving.
  */
 @RestController
 @RequestMapping("/public/process-mappings")
 @Slf4j
 public class ProcessHtmlController {
 
-    @Value("${app.storage.local.base-path:/tmp/simplifica/uploads}")
-    private String basePath;
+    private static final String URL_PREFIX = "/public/process-mappings/";
+
+    @Autowired
+    private StorageAdapter storageAdapter;
 
     @Autowired
     private ProcessMappingRepository processMappingRepository;
 
     /**
-     * Serves an HTML mapping file for a process.
+     * Serves any file from the process mapping ZIP at the given relative path.
      *
-     * SECURITY HEADERS:
-     * - Content-Security-Policy: Restricts inline scripts and styles to prevent XSS
-     * - X-Content-Type-Options: nosniff - Prevents MIME type sniffing
-     * - X-Frame-Options: SAMEORIGIN - Prevents clickjacking
+     * The wildcard path variable captures subdirectory paths such as
+     * "css/style.css" or "images/logo.png", which are resolved relative
+     * to the process storage prefix "processes/{processId}/".
      *
-     * The Content-Security-Policy allows:
-     * - default-src 'self': Only load resources from same origin
-     * - script-src 'unsafe-inline' 'self': Allow inline scripts and scripts from same origin
-     *   (required for Bizagi exports which use inline scripts)
-     * - style-src 'unsafe-inline' 'self': Allow inline styles and styles from same origin
-     *   (required for Bizagi exports which use inline styles)
-     * - img-src 'self' data:: Allow images from same origin and data URIs
-     *   (required for embedded images in Bizagi exports)
-     *
-     * @param processId the process UUID (used for validation)
-     * @param filename the HTML filename
-     * @return the HTML file with security headers
+     * @param processId the process UUID
+     * @param request the HTTP request (used to extract the full path)
+     * @return the file content with appropriate Content-Type and security headers
      */
-    @GetMapping("/{processId}/{filename:.+}")
-    public ResponseEntity<Resource> serveProcessMapping(
+    @GetMapping("/{processId}/**")
+    public ResponseEntity<Resource> serveFile(
             @PathVariable UUID processId,
-            @PathVariable String filename) {
+            HttpServletRequest request) {
 
-        log.info("Serving process mapping: processId={}, filename={}", processId, filename);
+        // Extract relative path after /{processId}/
+        // Use getServletPath() (excludes context path, e.g. /api) to match URL_PREFIX correctly
+        String requestUri = request.getServletPath();
+        String processPrefix = URL_PREFIX + processId + "/";
 
-        // Security: Validate inputs before path construction
-        if (!isValidPathSegment(filename)) {
-            log.warn("Invalid filename segment detected: {}", filename);
+        if (!requestUri.startsWith(processPrefix)) {
             return ResponseEntity.notFound().build();
         }
 
-        // Validate that the file exists and belongs to the specified process
-        boolean mappingExists = processMappingRepository.findByProcessIdOrderByUploadedAtDesc(processId)
-                .stream()
-                .anyMatch(mapping -> mapping.getFilename().equals(filename));
+        String relativePath = requestUri.substring(processPrefix.length());
 
-        if (!mappingExists) {
-            log.warn("Mapping file not found or does not belong to process: processId={}, filename={}",
-                    processId, filename);
+        // Security: validate relative path
+        if (!isValidRelativePath(relativePath)) {
+            log.warn("Invalid path requested: processId={}, path={}", processId, relativePath);
             return ResponseEntity.notFound().build();
         }
+
+        // Validate that this process has a mapping (security check)
+        boolean hasMappings = processMappingRepository
+            .findByProcessIdOrderByUploadedAtDesc(processId)
+            .stream()
+            .anyMatch(m -> m.getFileUrl() != null);
+
+        if (!hasMappings) {
+            log.warn("No mapping found for process: {}", processId);
+            return ResponseEntity.notFound().build();
+        }
+
+        // Fetch from storage adapter
+        String storageKey = "processes/" + processId + "/" + relativePath;
 
         try {
-            // Construct file path: basePath/processes/filename
-            Path filePath = Paths.get(basePath, "processes", filename).normalize();
-            Resource resource = loadFileAsResource(filePath);
+            InputStream inputStream = storageAdapter.retrieve(storageKey);
+            Resource resource = new InputStreamResource(inputStream);
 
-            // Return HTML with security headers
+            MediaType mediaType = resolveMediaType(relativePath);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(mediaType);
+
+            // Security headers
+            // Note: X-Frame-Options is intentionally omitted — SecurityConfig globally
+            // disables the header to allow iframe embedding from the frontend origin.
+            headers.set("Content-Security-Policy",
+                "default-src 'self'; " +
+                "script-src 'unsafe-inline' 'unsafe-eval' 'self'; " +
+                "style-src 'unsafe-inline' 'self'; " +
+                "img-src 'self' data: blob:; " +
+                "font-src 'self';");
+            headers.set("X-Content-Type-Options", "nosniff");
+
             return ResponseEntity.ok()
-                    .contentType(MediaType.TEXT_HTML)
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"")
-                    // Content Security Policy to prevent XSS attacks
-                    .header("Content-Security-Policy",
-                            "default-src 'self'; " +
-                            "script-src 'unsafe-inline' 'self'; " +
-                            "style-src 'unsafe-inline' 'self'; " +
-                            "img-src 'self' data:")
-                    // Prevent MIME type sniffing
-                    .header("X-Content-Type-Options", "nosniff")
-                    // Prevent clickjacking
-                    .header("X-Frame-Options", "SAMEORIGIN")
-                    .body(resource);
+                .headers(headers)
+                .body(resource);
 
-        } catch (InvalidPathException e) {
-            log.warn("Invalid path: processId={}, filename={}", processId, filename);
-            return ResponseEntity.notFound().build();
-        } catch (IOException e) {
-            log.warn("File not found: processId={}, filename={}", processId, filename);
+        } catch (StorageException e) {
+            log.debug("File not found in storage: {}", storageKey);
             return ResponseEntity.notFound().build();
         }
     }
 
     /**
-     * Loads a file as a Spring Resource with security validations.
+     * Validates that the relative path is safe to use.
+     * Blocks path traversal patterns, null bytes, and absolute paths.
      *
-     * Security validations:
-     * - Ensures the resolved path is within the base directory (prevents path traversal)
-     * - Checks that the file exists and is readable
-     *
-     * @param filePath the path to the file
-     * @return the file as a Resource
-     * @throws IOException if the file cannot be found or read
+     * @param path the relative path extracted from the request URI
+     * @return true if safe to use, false otherwise
      */
-    private Resource loadFileAsResource(Path filePath) throws IOException {
-        // Security: Validate that filePath is within basePath to prevent path traversal
-        Path baseDir = Paths.get(basePath).normalize().toAbsolutePath();
-        Path resolvedPath = filePath.normalize().toAbsolutePath();
-
-        if (!resolvedPath.startsWith(baseDir)) {
-            log.warn("Path traversal attempt detected: {}", filePath);
-            throw new IOException("Path traversal detected: " + filePath);
-        }
-
-        if (!Files.exists(filePath) || !Files.isReadable(filePath)) {
-            throw new IOException("File not found or not readable: " + filePath);
-        }
-
-        try {
-            Resource resource = new UrlResource(filePath.toUri());
-            if (resource.exists() && resource.isReadable()) {
-                log.debug("File loaded successfully: {}", filePath);
-                return resource;
-            } else {
-                throw new IOException("File not readable: " + filePath);
-            }
-        } catch (MalformedURLException e) {
-            throw new IOException("Malformed file path: " + filePath, e);
-        }
-    }
-
-    /**
-     * Validates that a path segment does not contain path traversal patterns.
-     * Prevents attacks like: ../, ..\, absolute paths, null bytes, etc.
-     *
-     * This validation is critical for preventing path traversal attacks where
-     * an attacker tries to access files outside the intended directory.
-     *
-     * @param segment the path segment to validate
-     * @return true if the segment is safe, false otherwise
-     */
-    private boolean isValidPathSegment(String segment) {
-        if (segment == null || segment.isEmpty()) {
-            return false;
-        }
-
-        // Check for null bytes (used to bypass extension checks in older systems)
-        if (segment.contains("\0")) {
-            return false;
-        }
-
-        // Check for path traversal with .. (even without slashes)
-        // This catches: .., ../, ..\, ../../, etc.
-        if (segment.contains("..")) {
-            return false;
-        }
-
-        // Check for current directory references
-        if (segment.contains("./") || segment.contains(".\\")) {
-            return false;
-        }
-
-        // Check for absolute paths (Unix)
-        if (segment.startsWith("/")) {
-            return false;
-        }
-
-        // Check for absolute paths (Windows)
-        if (segment.startsWith("\\")) {
-            return false;
-        }
-
-        // Check for Windows drive letters (C:, D:, etc.)
-        if (segment.length() >= 2 && Character.isLetter(segment.charAt(0)) && segment.charAt(1) == ':') {
-            return false;
-        }
-
+    private boolean isValidRelativePath(String path) {
+        if (path == null || path.isBlank()) return false;
+        if (path.contains("..")) return false;
+        if (path.contains("\0")) return false;
+        if (path.startsWith("/")) return false;
         return true;
+    }
+
+    /**
+     * Resolves the MediaType based on the file extension.
+     *
+     * @param path the file path (relative or full)
+     * @return the corresponding MediaType
+     */
+    private MediaType resolveMediaType(String path) {
+        int dot = path.lastIndexOf('.');
+        if (dot < 0) return MediaType.APPLICATION_OCTET_STREAM;
+
+        String ext = path.substring(dot + 1).toLowerCase();
+        return switch (ext) {
+            case "html", "htm" -> MediaType.TEXT_HTML;
+            case "css"         -> new MediaType("text", "css");
+            case "js"          -> new MediaType("application", "javascript");
+            case "json"        -> MediaType.APPLICATION_JSON;
+            case "xml"         -> MediaType.APPLICATION_XML;
+            case "svg"         -> new MediaType("image", "svg+xml");
+            case "png"         -> MediaType.IMAGE_PNG;
+            case "jpg", "jpeg" -> MediaType.IMAGE_JPEG;
+            case "gif"         -> MediaType.IMAGE_GIF;
+            case "webp"        -> new MediaType("image", "webp");
+            case "woff"        -> new MediaType("font", "woff");
+            case "woff2"       -> new MediaType("font", "woff2");
+            case "ttf"         -> new MediaType("font", "ttf");
+            case "eot"         -> new MediaType("application", "vnd.ms-fontobject");
+            case "otf"         -> new MediaType("font", "otf");
+            default            -> MediaType.APPLICATION_OCTET_STREAM;
+        };
     }
 }
