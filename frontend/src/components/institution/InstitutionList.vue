@@ -45,23 +45,24 @@
       :items-length="totalItems"
       :loading="loading"
       :items-per-page-options="[10, 25, 50, 100]"
+      :hide-default-footer="!props.isAdmin"
       hover
       @update:options="handleOptionsUpdate"
     >
       <!-- Logo Column -->
       <template #item.logo="{ item }">
-        <v-avatar
-          size="40"
-          :color="item.logoThumbnailUrl || item.logoUrl ? 'transparent' : 'grey-lighten-3'"
-        >
+        <div class="institution-logo-cell">
           <v-img
             v-if="item.logoThumbnailUrl || item.logoUrl"
             :src="item.logoThumbnailUrl || item.logoUrl"
             :alt="item.acronym"
-            cover
+            class="institution-logo"
+            contain
           />
-          <v-icon v-else size="20" color="grey">mdi-office-building</v-icon>
-        </v-avatar>
+          <div v-else class="institution-logo institution-logo--placeholder">
+            <v-icon size="22" color="grey">mdi-office-building</v-icon>
+          </div>
+        </div>
       </template>
 
       <!-- Name Column -->
@@ -196,7 +197,7 @@ interface Props {
   showFilters?: boolean
 }
 
-withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Props>(), {
   loading: false,
   isAdmin: false,
   showFilters: true,
@@ -242,16 +243,16 @@ const hasActiveFilters = computed(() => {
   return !!(filters.search || filters.type !== null || filters.active !== null)
 })
 
-// Table Headers
-const headers = [
-  { title: '', key: 'logo', sortable: false, width: '60px' },
-  { title: 'Instituição', key: 'name', sortable: true },
-  { title: 'Tipo', key: 'type', sortable: true },
-  { title: 'Domínio', key: 'domain', sortable: true },
-  { title: 'Status', key: 'active', sortable: true },
-  { title: 'Criada em', key: 'createdAt', sortable: true },
+// Table Headers — sorting disabled for non-admin
+const headers = computed(() => [
+  { title: '', key: 'logo', sortable: false, width: '80px' },
+  { title: 'Instituição', key: 'name', sortable: props.isAdmin },
+  { title: 'Tipo', key: 'type', sortable: props.isAdmin },
+  { title: 'Domínio', key: 'domain', sortable: props.isAdmin },
+  { title: 'Status', key: 'active', sortable: props.isAdmin },
+  { title: 'Criada em', key: 'createdAt', sortable: props.isAdmin },
   { title: 'Ações', key: 'actions', sortable: false, align: 'end' as const, width: '140px' },
-]
+])
 
 // Filter Options
 const typeFilterOptions = [
@@ -354,5 +355,24 @@ const formatDate = (dateString: string): string => {
     min-width: 100%;
     max-width: 100%;
   }
+}
+
+.institution-logo-cell {
+  padding: 6px 0;
+}
+
+.institution-logo {
+  width: 56px;
+  height: 44px;
+  border-radius: 6px;
+  object-fit: contain;
+}
+
+.institution-logo--placeholder {
+  background-color: rgb(var(--v-theme-surface-variant), 0.3);
+  background-color: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 </style>

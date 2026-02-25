@@ -115,6 +115,10 @@ export default createVuetify({
       variant: 'outlined',
       density: defaultDensity,
     },
+    VFileInput: {
+      variant: 'outlined',
+      density: defaultDensity,
+    }
   },
   display: {
     mobileBreakpoint: 'md',

@@ -159,6 +159,17 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/normatives',
+    name: 'normatives',
+    component: () => import('@/views/private/NormativesPage.vue'),
+    meta: {
+      layout: 'private',
+      requiresAuth: true,
+      requiresInstitution: true,
+      requiresUserManagement: true, // ADMIN ou MANAGER
+    },
+  },
+  {
     path: '/admin/settings',
     name: 'admin-settings',
     component: () => import('@/views/private/admin/SettingsPage.vue'),

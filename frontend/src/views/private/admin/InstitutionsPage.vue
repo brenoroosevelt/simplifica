@@ -269,7 +269,11 @@ async function handleFormSubmit(data: InstitutionCreateRequest | InstitutionUpda
 
   try {
     if (isEditMode.value && selectedInstitution.value) {
-      await institutionService.update(selectedInstitution.value.id, data as InstitutionUpdateRequest)
+      const { removeImage, ...updateData } = data as InstitutionUpdateRequest & { removeImage?: boolean }
+      if (removeImage) {
+        await institutionService.deleteLogo(selectedInstitution.value.id)
+      }
+      await institutionService.update(selectedInstitution.value.id, updateData as InstitutionUpdateRequest)
       showSnackbar('Instituição atualizada com sucesso', 'success')
     } else {
       await institutionService.create(data as InstitutionCreateRequest)

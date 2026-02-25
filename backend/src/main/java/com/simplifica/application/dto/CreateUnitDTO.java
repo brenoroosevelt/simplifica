@@ -29,6 +29,9 @@ public class CreateUnitDTO {
     @Pattern(regexp = "^[A-Za-z0-9-]+$", message = "Acronym must contain only letters, numbers, and hyphens")
     private String acronym;
 
+    @Size(max = 255, message = "Parent unit must not exceed 255 characters")
+    private String parentUnit;
+
     @Size(max = 5000, message = "Description must not exceed 5000 characters")
     private String description;
 

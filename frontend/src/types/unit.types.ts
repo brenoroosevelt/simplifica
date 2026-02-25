@@ -5,6 +5,7 @@ export interface Unit {
   institutionAcronym: string
   name: string
   acronym: string
+  parentUnit?: string
   description?: string
   active: boolean
   createdAt: string
@@ -14,12 +15,14 @@ export interface Unit {
 export interface UnitCreateRequest {
   name: string
   acronym: string
+  parentUnit?: string
   description?: string
   active?: boolean
 }
 
 export interface UnitUpdateRequest {
   name?: string
+  parentUnit?: string
   description?: string
   active?: boolean
   // Note: acronym is intentionally NOT included (immutable after creation)

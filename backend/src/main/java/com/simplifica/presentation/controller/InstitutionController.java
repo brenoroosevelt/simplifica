@@ -153,6 +153,19 @@ public class InstitutionController {
     }
 
     /**
+     * Removes the logo of an institution.
+     *
+     * @param id the institution's UUID
+     * @return the updated institution DTO
+     */
+    @DeleteMapping("/{id}/logo")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<InstitutionDTO> deleteInstitutionLogo(@PathVariable UUID id) {
+        Institution institution = institutionService.deleteLogo(id);
+        return ResponseEntity.ok(InstitutionDTO.fromEntity(institution));
+    }
+
+    /**
      * Soft deletes an institution by setting its active status to false.
      *
      * @param id the institution's UUID

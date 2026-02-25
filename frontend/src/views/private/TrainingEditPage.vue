@@ -108,21 +108,6 @@ const router = useRouter()
 const isCreationMode = computed(() => route.name === 'training-new')
 const isEditMode = computed(() => !isCreationMode.value)
 
-// Get trainingId only in edit mode
-const trainingId = computed(() => {
-  if (isEditMode.value) {
-    return route.params.id as string
-  }
-  return 'new'
-})
-
-console.log('=== TrainingEditPage Init ===')
-console.log('route.name:', route.name)
-console.log('isCreationMode:', isCreationMode.value)
-console.log('trainingId:', trainingId.value)
-console.log('===========================')
-
-
 // Page title based on mode
 const pageTitle = computed(() =>
   isCreationMode.value ? 'Nova Capacitação' : 'Editar Capacitação'
@@ -131,16 +116,12 @@ const pageTitle = computed(() =>
 // Local videos state for creation mode (before training is created)
 const localVideos = ref<TrainingVideo[]>([])
 
-// Use different composables based on mode
-const editComposable = computed(() =>
-  isEditMode.value ? useTrainingDetail(trainingId.value) : null
-)
-const createComposable = computed(() =>
-  isCreationMode.value ? useTrainingForm() : null
-)
+// Composables must be called at top level of setup (not inside computed/watch)
+const editComposable = useTrainingDetail(route.params.id as string || '')
+const createComposable = useTrainingForm()
 
 // Extract methods and state based on mode
-const training = computed(() => editComposable.value?.training.value || null)
+const training = computed(() => isEditMode.value ? editComposable.training.value : null)
 const isLoading = ref(false)
 const isSaving = ref(false)
 const error = ref<string | null>(null)
@@ -157,8 +138,8 @@ const showSnackbar = (message: string, color = 'success') => {
 }
 
 const handleCancel = () => {
-  if (isEditMode.value && editComposable.value) {
-    editComposable.value.navigateToDetail()
+  if (isEditMode.value) {
+    editComposable.navigateToDetail()
   } else {
     router.push({ name: 'trainings' })
   }
@@ -171,25 +152,25 @@ const handleSaveClick = () => {
 
 const handleFormSubmit = async (data: TrainingUpdateRequest | TrainingCreateRequest) => {
   try {
-    if (isEditMode.value && editComposable.value) {
+    if (isEditMode.value) {
       // Edit mode
       isSaving.value = true
 
       const { image, removeImage, ...trainingData } = data as TrainingUpdateRequest & { image?: File; removeImage?: boolean }
 
-      await editComposable.value.updateTraining(trainingData)
+      await editComposable.updateTraining(trainingData)
 
       if (removeImage) {
-        await editComposable.value.deleteCoverImage()
+        await editComposable.deleteCoverImage()
       } else if (image) {
-        await editComposable.value.uploadCoverImage(image)
+        await editComposable.uploadCoverImage(image)
       }
 
       showSnackbar('Capacitação atualizada com sucesso!')
       setTimeout(() => {
-        editComposable.value?.navigateToDetail()
+        editComposable.navigateToDetail()
       }, 1000)
-    } else if (isCreationMode.value && createComposable.value) {
+    } else if (isCreationMode.value) {
       // Creation mode
       isSaving.value = true
 
@@ -215,7 +196,7 @@ const handleFormSubmit = async (data: TrainingUpdateRequest | TrainingCreateRequ
         videos: videosData,
       }
 
-      const created = await createComposable.value.createTraining(createData)
+      const created = await createComposable.createTraining(createData)
       showSnackbar('Capacitação criada com sucesso!')
 
       // Navigate to detail page of created training
@@ -233,11 +214,11 @@ const handleFormSubmit = async (data: TrainingUpdateRequest | TrainingCreateRequ
 }
 
 const handleVideoAdd = async (videoData: TrainingVideoCreateRequest) => {
-  if (isEditMode.value && editComposable.value) {
+  if (isEditMode.value) {
     // Edit mode: add video to existing training
     try {
       isSaving.value = true
-      await editComposable.value.addVideo(videoData)
+      await editComposable.addVideo(videoData)
       showSnackbar('Vídeo adicionado com sucesso!')
     } catch (err: any) {
       showSnackbar(err.response?.data?.message || 'Erro ao adicionar vídeo', 'error')
@@ -262,11 +243,11 @@ const handleVideoAdd = async (videoData: TrainingVideoCreateRequest) => {
 }
 
 const handleVideoUpdate = async (videoId: string, videoData: TrainingVideoUpdateRequest) => {
-  if (isEditMode.value && editComposable.value) {
+  if (isEditMode.value) {
     // Edit mode: update video on server
     try {
       isSaving.value = true
-      await editComposable.value.updateVideo(videoId, videoData)
+      await editComposable.updateVideo(videoId, videoData)
       showSnackbar('Vídeo atualizado com sucesso!')
     } catch (err: any) {
       showSnackbar(err.response?.data?.message || 'Erro ao atualizar vídeo', 'error')
@@ -294,11 +275,11 @@ const handleVideoUpdate = async (videoId: string, videoData: TrainingVideoUpdate
 }
 
 const handleVideoDelete = async (videoId: string) => {
-  if (isEditMode.value && editComposable.value) {
+  if (isEditMode.value) {
     // Edit mode: delete video on server
     try {
       isSaving.value = true
-      await editComposable.value.deleteVideo(videoId)
+      await editComposable.deleteVideo(videoId)
       showSnackbar('Vídeo removido com sucesso!')
     } catch (err: any) {
       showSnackbar(err.response?.data?.message || 'Erro ao remover vídeo', 'error')
@@ -316,11 +297,11 @@ const handleVideoDelete = async (videoId: string) => {
 }
 
 const handleVideoReorder = async (videoIds: string[]) => {
-  if (isEditMode.value && editComposable.value) {
+  if (isEditMode.value) {
     // Edit mode: reorder videos on server
     try {
       isSaving.value = true
-      await editComposable.value.reorderVideos(videoIds)
+      await editComposable.reorderVideos(videoIds)
       showSnackbar('Vídeos reordenados com sucesso!')
     } catch (err: any) {
       showSnackbar(err.response?.data?.message || 'Erro ao reordenar vídeos', 'error')
@@ -339,14 +320,14 @@ const handleVideoReorder = async (videoIds: string[]) => {
 }
 
 onMounted(async () => {
-  if (isEditMode.value && editComposable.value) {
+  if (isEditMode.value) {
     // Load existing training
     isLoading.value = true
     try {
-      await editComposable.value.loadTraining()
+      await editComposable.loadTraining()
       // Initialize local videos with training videos
-      if (editComposable.value.training.value?.videos) {
-        localVideos.value = [...editComposable.value.training.value.videos]
+      if (editComposable.training.value?.videos) {
+        localVideos.value = [...editComposable.training.value.videos]
       }
     } catch (err: any) {
       error.value = err.response?.data?.message || 'Erro ao carregar capacitação'

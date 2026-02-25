@@ -8,6 +8,7 @@ import com.simplifica.infrastructure.repository.InstitutionRepository;
 import com.simplifica.infrastructure.repository.InstitutionSpecifications;
 import com.simplifica.presentation.exception.ResourceAlreadyExistsException;
 import com.simplifica.presentation.exception.ResourceNotFoundException;
+import com.simplifica.storage.service.StorageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,7 +37,7 @@ public class InstitutionService {
     private InstitutionRepository institutionRepository;
 
     @Autowired
-    private FileStorageService fileStorageService;
+    private StorageService storageService;
 
     /**
      * Finds an institution by its ID.
@@ -141,9 +142,10 @@ public class InstitutionService {
 
         if (logo != null && !logo.isEmpty()) {
             LOGGER.info("Uploading logo for institution: {}", institution.getId());
-            FileStorageService.FileUploadResult uploadResult =
-                    fileStorageService.storeImage(logo, "institutions");
-            institution.setLogoUrls(uploadResult.getFileUrl(), uploadResult.getThumbnailUrl());
+            StorageService.FileUploadResult uploadResult =
+                    storageService.storeFile(logo, "Institution", institution.getId(),
+                            com.simplifica.storage.domain.FileCategory.INSTITUTION_LOGO, true);
+            institution.setLogoUrls(uploadResult.fileUrl(), uploadResult.thumbnailUrl());
             institution = institutionRepository.save(institution);
             LOGGER.info("Logo uploaded successfully for institution: {}", institution.getId());
         }
@@ -206,19 +208,38 @@ public class InstitutionService {
             LOGGER.info("Replacing logo for institution: {}", id);
 
             // Delete old logo if exists
-            if (institution.getLogoUrl() != null) {
-                fileStorageService.deleteFile(institution.getLogoUrl());
-            }
+            storageService.deleteByEntityAndCategory("Institution", id,
+                    com.simplifica.storage.domain.FileCategory.INSTITUTION_LOGO);
 
             // Upload new logo
-            FileStorageService.FileUploadResult uploadResult =
-                    fileStorageService.storeImage(logo, "institutions");
-            institution.setLogoUrls(uploadResult.getFileUrl(), uploadResult.getThumbnailUrl());
+            StorageService.FileUploadResult uploadResult =
+                    storageService.storeFile(logo, "Institution", id,
+                            com.simplifica.storage.domain.FileCategory.INSTITUTION_LOGO, true);
+            institution.setLogoUrls(uploadResult.fileUrl(), uploadResult.thumbnailUrl());
             institution = institutionRepository.save(institution);
             LOGGER.info("Logo replaced successfully for institution: {}", id);
         }
 
         return institution;
+    }
+
+    /**
+     * Deletes the logo of an institution.
+     *
+     * @param id the institution's UUID
+     * @return the updated Institution entity
+     * @throws ResourceNotFoundException if the institution is not found
+     */
+    @Transactional
+    public Institution deleteLogo(UUID id) {
+        LOGGER.info("Deleting logo for institution: {}", id);
+        Institution institution = findById(id);
+        storageService.deleteByEntityAndCategory("Institution", id,
+                com.simplifica.storage.domain.FileCategory.INSTITUTION_LOGO);
+        institution.clearLogo();
+        Institution saved = institutionRepository.save(institution);
+        LOGGER.info("Logo deleted for institution: {}", id);
+        return saved;
     }
 
     /**

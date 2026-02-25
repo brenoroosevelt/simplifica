@@ -52,20 +52,7 @@
     >
       <!-- Avatar Column -->
       <template #item.avatar="{ item }">
-        <v-avatar
-          size="40"
-          :color="item.pictureUrl ? 'transparent' : 'primary'"
-        >
-          <v-img
-            v-if="item.pictureUrl"
-            :src="item.pictureUrl"
-            :alt="item.name"
-            cover
-          />
-          <span v-else class="text-white text-caption">
-            {{ getUserInitials(item.name) }}
-          </span>
-        </v-avatar>
+        <UserAvatar :size="40" :name="item.name" :picture-url="item.pictureUrl" />
       </template>
 
       <!-- Name Column -->
@@ -197,6 +184,7 @@
 
 <script setup lang="ts">
 import { reactive, computed, watch, onMounted, ref } from 'vue'
+import UserAvatar from '@/components/common/UserAvatar.vue'
 import { institutionService } from '@/services/institution.service'
 import type { Institution } from '@/types/institution.types'
 import type { UserListItem } from '@/types/user.types'
@@ -378,15 +366,6 @@ async function fetchInstitutions(): Promise<void> {
 }
 
 // Utility functions
-const getUserInitials = (name: string): string => {
-  if (!name) return '?'
-  const names = name.split(' ')
-  if (names.length >= 2) {
-    return `${names[0]?.[0] || ''}${names[names.length - 1]?.[0] || ''}`.toUpperCase()
-  }
-  return names[0]?.[0]?.toUpperCase() || '?'
-}
-
 const getProviderColor = (provider: string): string => {
   const colors: Record<string, string> = {
     GOOGLE: 'red',

@@ -128,6 +128,7 @@ public class UnitService {
                 .institution(institution)
                 .name(dto.getName())
                 .acronym(normalizedAcronym)
+                .parentUnit(dto.getParentUnit())
                 .description(dto.getDescription())
                 .active(dto.getActive() != null ? dto.getActive() : true)
                 .build();
@@ -158,6 +159,23 @@ public class UnitService {
             unit.setName(dto.getName());
         }
 
+        // Update acronym if provided
+        if (dto.getAcronym() != null && !dto.getAcronym().isBlank()) {
+            String normalizedAcronym = dto.getAcronym().toUpperCase().trim();
+            if (!normalizedAcronym.equals(unit.getAcronym())) {
+                UUID institutionId = unit.getInstitution().getId();
+                if (unitRepository.existsByAcronymAndInstitutionIdAndIdNot(normalizedAcronym, institutionId, id)) {
+                    throw new ResourceAlreadyExistsException("Unit", "acronym", normalizedAcronym);
+                }
+                unit.setAcronym(normalizedAcronym);
+            }
+        }
+
+        // Update parentUnit if provided (empty string clears the field)
+        if (dto.getParentUnit() != null) {
+            unit.setParentUnit(dto.getParentUnit().isBlank() ? null : dto.getParentUnit());
+        }
+
         // Update description if provided
         if (dto.getDescription() != null) {
             unit.setDescription(dto.getDescription());
@@ -177,7 +195,7 @@ public class UnitService {
     }
 
     /**
-     * Soft deletes a unit by setting its active status to false.
+     * Hard deletes a unit from the database.
      *
      * @param id the unit UUID
      * @throws ResourceNotFoundException if not found
@@ -185,13 +203,12 @@ public class UnitService {
      */
     @Transactional
     public void delete(UUID id) {
-        LOGGER.info("Soft deleting unit: {}", id);
+        LOGGER.info("Deleting unit: {}", id);
 
         Unit unit = findById(id);
-        unit.setActive(false);
-        unitRepository.save(unit);
+        unitRepository.delete(unit);
 
-        LOGGER.info("Unit {} marked as inactive", id);
+        LOGGER.info("Unit {} deleted successfully", id);
     }
 
     /**

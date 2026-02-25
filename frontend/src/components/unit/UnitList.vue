@@ -60,6 +60,12 @@
         </div>
       </template>
 
+      <!-- Parent Unit Column -->
+      <template #item.parentUnit="{ item }">
+        <span v-if="item.parentUnit" class="text-body-2">{{ item.parentUnit }}</span>
+        <span v-else class="text-caption text-medium-emphasis">—</span>
+      </template>
+
       <!-- Active Column -->
       <template #item.active="{ item }">
         <v-chip
@@ -191,6 +197,7 @@ const hasActiveFilters = computed(() => {
 const headers = [
   { title: 'Sigla', key: 'acronym', sortable: true, width: '120px' },
   { title: 'Nome', key: 'name', sortable: true },
+  { title: 'Unidade Superior', key: 'parentUnit', sortable: true },
   { title: 'Status', key: 'active', sortable: true, width: '120px' },
   { title: 'Criada em', key: 'createdAt', sortable: true, width: '130px' },
   { title: 'Ações', key: 'actions', sortable: false, width: '100px' },

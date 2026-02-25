@@ -53,6 +53,7 @@ export interface InstitutionUpdateRequest {
   domain?: string
   active?: boolean
   logo?: File
+  removeImage?: boolean
 }
 
 export interface UserInstitution {

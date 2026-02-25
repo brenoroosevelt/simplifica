@@ -32,9 +32,11 @@
               Formato esperado do CSV:
             </div>
             <div class="text-body-2">
-              <strong>Colunas obrigatórias:</strong> name, acronym
+              <strong>Colunas obrigatórias:</strong> nome, sigla
               <br>
-              <strong>Colunas opcionais:</strong> description, active{{ isAdmin ? ', institutionId, institutionAcronym' : '' }}
+              <strong>Colunas opcionais:</strong> unidadeSuperior, descricao, status{{ isAdmin ? ', instituicaoId, instituicaoSigla' : '' }}
+              <br>
+              <strong>Valores aceitos em status:</strong> 1, sim, true (ativo) · 0, não, false (inativo)
             </div>
           </v-alert>
 
@@ -388,17 +390,15 @@ const handleImport = async () => {
 const downloadTemplate = () => {
   let csvContent: string
   if (isAdmin.value) {
-    // Template para ADMIN com coluna institutionId opcional
-    csvContent = 'name,acronym,description,active,institutionId,institutionAcronym\n'
-    csvContent += 'Tecnologia da Informação,TI,Unidade responsável por TI,true,,\n'
-    csvContent += 'Recursos Humanos,RH,Gestão de pessoas,true,,SIMP-ADMIN\n'
-    csvContent += 'Financeiro,FIN,Gestão financeira,true,uuid-opcional-aqui,'
+    csvContent = 'nome,sigla,unidadeSuperior,descricao,status,instituicaoId,instituicaoSigla\n'
+    csvContent += 'Tecnologia da Informação,TI,Secretaria de Administração,Unidade responsável por TI,sim,,\n'
+    csvContent += 'Recursos Humanos,RH,,Gestão de pessoas,1,,SIMP-ADMIN\n'
+    csvContent += 'Financeiro,FIN,,Gestão financeira,true,uuid-opcional-aqui,'
   } else {
-    // Template para MANAGER sem coluna institutionId
-    csvContent = 'name,acronym,description,active\n'
-    csvContent += 'Tecnologia da Informação,TI,Unidade responsável por TI,true\n'
-    csvContent += 'Recursos Humanos,RH,Gestão de pessoas,true\n'
-    csvContent += 'Financeiro,FIN,Gestão financeira,true'
+    csvContent = 'nome,sigla,unidadeSuperior,descricao,status\n'
+    csvContent += 'Tecnologia da Informação,TI,Secretaria de Administração,Unidade responsável por TI,sim\n'
+    csvContent += 'Recursos Humanos,RH,,Gestão de pessoas,1\n'
+    csvContent += 'Financeiro,FIN,,Gestão financeira,true'
   }
 
   downloadCsv(csvContent, 'template-importacao-unidades.csv')

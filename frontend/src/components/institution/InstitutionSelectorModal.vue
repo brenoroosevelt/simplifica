@@ -43,20 +43,18 @@
               @click="handleSelect(institution.id)"
             >
               <v-card-text class="d-flex flex-column align-center text-center py-6">
-                <v-avatar
-                  size="80"
-                  class="mb-4"
-                  color="primary"
-                  variant="tonal"
-                >
+                <div class="selector-logo mb-4">
                   <v-img
                     v-if="institution.logoThumbnailUrl || institution.logoUrl"
                     :src="institution.logoThumbnailUrl || institution.logoUrl"
                     :alt="institution.name"
-                    cover
+                    class="selector-logo__img"
+                    contain
                   />
-                  <v-icon v-else size="48">mdi-office-building</v-icon>
-                </v-avatar>
+                  <div v-else class="selector-logo__placeholder">
+                    <v-icon size="40" color="primary">mdi-office-building</v-icon>
+                  </div>
+                </div>
 
                 <h3 class="text-h6 font-weight-medium mb-2">
                   {{ institution.acronym }}
@@ -155,6 +153,28 @@ const getTypeColor = (type: InstitutionType): string => {
 </script>
 
 <style scoped>
+.selector-logo {
+  width: 96px;
+  height: 72px;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.selector-logo__img {
+  width: 100%;
+  height: 100%;
+}
+
+.selector-logo__placeholder {
+  width: 100%;
+  height: 100%;
+  background: rgba(var(--v-theme-primary), 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .institution-card {
   cursor: pointer;
   transition: all 0.3s ease;

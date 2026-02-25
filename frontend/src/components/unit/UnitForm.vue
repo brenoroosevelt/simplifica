@@ -22,8 +22,7 @@
           placeholder="Ex: TI"
           :rules="[rules.required, rules.maxLength(50), rules.acronymPattern]"
           :counter="50"
-          :disabled="isEditMode"
-          :hint="isEditMode ? 'A sigla não pode ser alterada' : 'Será convertida automaticamente para maiúsculas'"
+          hint="Será convertida automaticamente para maiúsculas"
           persistent-hint
           prepend-inner-icon="mdi-tag"
           required
@@ -46,6 +45,18 @@
           variant="outlined"
           hint="A instituição é automaticamente definida com base na sua seleção atual"
           persistent-hint
+        />
+      </v-col>
+
+      <!-- Parent Unit Field -->
+      <v-col cols="12">
+        <v-text-field
+          v-model="formData.parentUnit"
+          label="Unidade Superior (opcional)"
+          placeholder="Ex: Secretaria de Administração"
+          :rules="[rules.maxLength(255)]"
+          :counter="255"
+          prepend-inner-icon="mdi-sitemap"
         />
       </v-col>
 
@@ -124,11 +135,13 @@ const institutionName = computed(() => institutionStore.activeInstitution?.name 
 const formData = reactive<{
   name: string
   acronym: string
+  parentUnit: string
   description: string
   active: boolean
 }>({
   name: '',
   acronym: '',
+  parentUnit: '',
   description: '',
   active: true,
 })
@@ -171,6 +184,8 @@ const handleSubmit = () => {
   if (isEditMode.value) {
     const updateData: UnitUpdateRequest = {
       name: formData.name,
+      acronym: formData.acronym,
+      parentUnit: formData.parentUnit || undefined,
       description: formData.description || undefined,
       active: formData.active,
     }
@@ -180,6 +195,7 @@ const handleSubmit = () => {
     const createData: UnitCreateRequest = {
       name: formData.name,
       acronym: formData.acronym,
+      parentUnit: formData.parentUnit || undefined,
       description: formData.description || undefined,
       active: formData.active,
     }
@@ -193,11 +209,13 @@ const resetForm = () => {
   if (props.unit) {
     formData.name = props.unit.name
     formData.acronym = props.unit.acronym
+    formData.parentUnit = props.unit.parentUnit || ''
     formData.description = props.unit.description || ''
     formData.active = props.unit.active
   } else {
     formData.name = ''
     formData.acronym = ''
+    formData.parentUnit = ''
     formData.description = ''
     formData.active = true
   }
@@ -208,6 +226,7 @@ onMounted(() => {
   if (props.unit) {
     formData.name = props.unit.name
     formData.acronym = props.unit.acronym
+    formData.parentUnit = props.unit.parentUnit || ''
     formData.description = props.unit.description || ''
     formData.active = props.unit.active
 
@@ -222,6 +241,7 @@ watch(
     if (newUnit) {
       formData.name = newUnit.name
       formData.acronym = newUnit.acronym
+      formData.parentUnit = newUnit.parentUnit || ''
       formData.description = newUnit.description || ''
       formData.active = newUnit.active
 

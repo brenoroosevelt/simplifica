@@ -27,6 +27,7 @@ public class UnitDTO {
     private String institutionAcronym;
     private String name;
     private String acronym;
+    private String parentUnit;
     private String description;
     private Boolean active;
     private LocalDateTime createdAt;
@@ -50,6 +51,7 @@ public class UnitDTO {
                 .institutionAcronym(unit.getInstitution().getAcronym())
                 .name(unit.getName())
                 .acronym(unit.getAcronym())
+                .parentUnit(unit.getParentUnit())
                 .description(unit.getDescription())
                 .active(unit.getActive())
                 .createdAt(unit.getCreatedAt())

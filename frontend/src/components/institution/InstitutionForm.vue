@@ -94,16 +94,15 @@
 
       <!-- Active Field - Apenas ADMIN pode alterar -->
       <v-col cols="12" md="6">
-        <v-select
+        <v-switch
           v-model="formData.active"
-          label="Status *"
-          :items="statusOptions"
-          :rules="[rules.required]"
+          :label="formData.active ? 'Ativa' : 'Inativa'"
+          :color="formData.active ? 'primary' : undefined"
           :disabled="!isAdmin"
           :hint="!isAdmin ? 'Apenas administradores podem alterar o status' : ''"
           persistent-hint
-          prepend-inner-icon="mdi-check-circle"
-          required
+          hide-details="auto"
+          density="compact"
         />
       </v-col>
 
@@ -174,6 +173,7 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
 const isValid = ref(false)
 const logoPreview = ref<string | null>(null)
 const selectedFile = ref<File | null>(null)
+const imageRemoved = ref(false)
 
 const isEditMode = computed(() => !!props.institution)
 
@@ -198,7 +198,7 @@ const hasChanges = computed(() => {
     return true // For create mode, always allow submission if valid
   }
   const currentData = JSON.stringify(formData)
-  return currentData !== initialData.value || !!selectedFile.value
+  return currentData !== initialData.value || !!selectedFile.value || imageRemoved.value
 })
 
 // Options for selects
@@ -207,11 +207,6 @@ const typeOptions = [
   { title: 'Estadual', value: InstitutionType.ESTADUAL },
   { title: 'Municipal', value: InstitutionType.MUNICIPAL },
   { title: 'Privada', value: InstitutionType.PRIVADA },
-]
-
-const statusOptions = [
-  { title: 'Ativa', value: true },
-  { title: 'Inativa', value: false },
 ]
 
 // Validation Rules
@@ -268,6 +263,9 @@ const handleFileChange = (event: Event) => {
 }
 
 const clearLogo = () => {
+  if (props.institution?.logoUrl && !selectedFile.value) {
+    imageRemoved.value = true
+  }
   selectedFile.value = null
   logoPreview.value = null
   if (fileInputRef.value) {
@@ -297,6 +295,9 @@ const handleSubmit = () => {
     if (selectedFile.value) {
       updateData.logo = selectedFile.value
     }
+    if (imageRemoved.value) {
+      updateData.removeImage = true
+    }
 
     emit('submit', updateData)
   } else {
@@ -322,8 +323,8 @@ onMounted(() => {
     formData.domain = props.institution.domain || ''
     formData.active = props.institution.active
 
-    if (props.institution.logoUrl) {
-      logoPreview.value = props.institution.logoUrl
+    if (props.institution.logoThumbnailUrl || props.institution.logoUrl) {
+      logoPreview.value = props.institution.logoThumbnailUrl || props.institution.logoUrl
     }
 
     initialData.value = JSON.stringify(formData)
@@ -341,10 +342,11 @@ watch(
       formData.domain = newInstitution.domain || ''
       formData.active = newInstitution.active
 
-      if (newInstitution.logoUrl) {
-        logoPreview.value = newInstitution.logoUrl
+      if (newInstitution.logoThumbnailUrl || newInstitution.logoUrl) {
+        logoPreview.value = newInstitution.logoThumbnailUrl || newInstitution.logoUrl
       }
 
+      imageRemoved.value = false
       initialData.value = JSON.stringify(formData)
     }
   }

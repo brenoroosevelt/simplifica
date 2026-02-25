@@ -104,19 +104,19 @@ public class CsvValidationService {
     }
 
     /**
-     * Validates that the CSV contains required headers.
+     * Validates that the CSV contains required headers (Portuguese column names).
      *
-     * Required headers: name, acronym
-     * Optional headers: description, active, institutionId, institutionAcronym
+     * Required headers: nome, sigla
+     * Optional headers: unidadeSuperior, descricao, status, instituicaoId, instituicaoSigla
      *
      * @param headerMap the header map from CSV parser
      * @throws BadRequestException if required headers are missing
      */
     private void validateHeaders(Map<String, Integer> headerMap) {
-        if (!headerMap.containsKey("name") || !headerMap.containsKey("acronym")) {
+        if (!headerMap.containsKey("nome") || !headerMap.containsKey("sigla")) {
             throw new BadRequestException(
-                "CSV must contain 'name' and 'acronym' columns. " +
-                "Optional columns: description, active, institutionId, institutionAcronym"
+                "O CSV deve conter as colunas 'nome' e 'sigla'. " +
+                "Colunas opcionais: unidadeSuperior, descricao, status, instituicaoId, instituicaoSigla"
             );
         }
     }

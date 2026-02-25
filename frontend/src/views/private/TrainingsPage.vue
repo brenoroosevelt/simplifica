@@ -2,7 +2,7 @@
   <div class="trainings-page">
     <PageHeader
       title="Capacitações"
-      subtitle="Gerencie as capacitações e treinamentos da instituição"
+      subtitle="Capacitações e treinamentos da instituição"
     >
       <template #actions>
         <v-btn

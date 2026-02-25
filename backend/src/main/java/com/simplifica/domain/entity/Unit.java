@@ -41,6 +41,9 @@ public class Unit {
     @Column(nullable = false, length = 50)
     private String acronym;
 
+    @Column(name = "parent_unit", length = 255)
+    private String parentUnit;
+
     @Column(columnDefinition = "TEXT")
     private String description;
 

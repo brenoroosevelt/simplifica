@@ -32,8 +32,6 @@
       </template>
     </v-list>
 
-    <v-spacer />
-
     <div class="sidebar-footer">
       <span class="text-caption text-medium-emphasis">v1.0.0</span>
     </div>
@@ -116,6 +114,15 @@ const adminItems = computed(() => {
     })
   }
 
+  // Normativos: disponível para ADMIN e MANAGER
+  if (canManageUsers.value) {
+    items.push({
+      title: 'Normativos',
+      icon: 'mdi-file-document-multiple',
+      to: '/normatives',
+    })
+  }
+
   // Configurações: apenas para ADMIN
   if (isAdmin.value) {
     items.push({
@@ -140,6 +147,7 @@ const adminItems = computed(() => {
 .sidebar-menu {
   padding: 16px 12px;
   flex: 1;
+  overflow-y: auto;
 }
 
 .sidebar-footer {

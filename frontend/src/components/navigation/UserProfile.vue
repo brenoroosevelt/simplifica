@@ -2,24 +2,14 @@
   <v-menu offset-y>
     <template v-slot:activator="{ props }">
       <v-btn v-bind="props" icon variant="text">
-        <v-avatar v-if="user?.pictureUrl" size="32">
-          <v-img :src="user.pictureUrl" :alt="user.name" />
-        </v-avatar>
-        <v-avatar v-else color="primary" size="32">
-          <span class="text-white text-caption">{{ userInitials }}</span>
-        </v-avatar>
+        <UserAvatar :size="32" :picture-url="user?.pictureUrl" />
       </v-btn>
     </template>
 
     <v-card min-width="250">
       <v-card-text>
         <div class="d-flex align-center mb-2">
-          <v-avatar v-if="user?.pictureUrl" size="40" class="mr-3">
-            <v-img :src="user.pictureUrl" :alt="user.name" />
-          </v-avatar>
-          <v-avatar v-else color="primary" size="40" class="mr-3">
-            <span class="text-white">{{ userInitials }}</span>
-          </v-avatar>
+          <UserAvatar :size="40" :picture-url="user?.pictureUrl" class="mr-3" />
 
           <div>
             <div class="font-weight-medium">{{ user?.name }}</div>
@@ -47,22 +37,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
+import UserAvatar from '@/components/common/UserAvatar.vue'
 
 const router = useRouter()
 const { user, logout } = useAuth()
-
-const userInitials = computed(() => {
-  if (!user.value?.name) return '?'
-
-  const names = user.value.name.split(' ')
-  if (names.length >= 2) {
-    return `${names[0]?.[0] || ''}${names[names.length - 1]?.[0] || ''}`.toUpperCase()
-  }
-  return names[0]?.[0]?.toUpperCase() || '?'
-})
 
 const handleLogout = () => {
   logout()

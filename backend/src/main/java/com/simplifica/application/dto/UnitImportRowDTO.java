@@ -31,8 +31,14 @@ public class UnitImportRowDTO {
     private String acronym;
 
     /**
+     * Optional superior organizational unit name.
+     * Maps to 'unidadeSuperior' column in CSV.
+     */
+    private String parentUnit;
+
+    /**
      * Optional description of the unit.
-     * Maps to 'description' column in CSV.
+     * Maps to 'descricao' column in CSV.
      */
     private String description;
 
@@ -45,14 +51,14 @@ public class UnitImportRowDTO {
 
     /**
      * Optional institution ID (UUID format).
-     * Maps to 'institutionId' column in CSV.
+     * Maps to 'instituicaoId' column in CSV.
      * Only used by ADMIN users - ignored for MANAGER.
      */
     private String institutionId;
 
     /**
      * Optional institution acronym.
-     * Maps to 'institutionAcronym' column in CSV.
+     * Maps to 'instituicaoSigla' column in CSV.
      * Only used by ADMIN users - ignored for MANAGER.
      * Alternative to institutionId.
      */

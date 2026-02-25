@@ -41,6 +41,11 @@ public enum FileCategory {
     TRAINING_ATTACHMENT,
 
     /**
+     * Normative document files
+     */
+    NORMATIVE_FILE,
+
+    /**
      * Generic/other files
      */
     OTHER

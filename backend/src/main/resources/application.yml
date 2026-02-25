@@ -37,6 +37,12 @@ spring:
     locations: classpath:db/migration
     validate-on-migrate: true
 
+  # Multipart file upload limits
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 55MB
+
   # OAuth2 Client Configuration
   security:
     oauth2:

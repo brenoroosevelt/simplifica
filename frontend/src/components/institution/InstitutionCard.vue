@@ -6,21 +6,19 @@
   >
     <v-card-text class="pa-4">
       <div class="d-flex align-center" style="min-height: 48px;">
-        <!-- Avatar/Logo -->
-        <v-avatar
-          size="48"
-          :color="institution.logoThumbnailUrl || institution.logoUrl ? 'transparent' : 'primary'"
-          variant="tonal"
-          class="mr-3"
-        >
+        <!-- Logo -->
+        <div class="institution-card__logo mr-3">
           <v-img
             v-if="institution.logoThumbnailUrl || institution.logoUrl"
             :src="institution.logoThumbnailUrl || institution.logoUrl"
             :alt="institution.acronym"
-            cover
+            class="institution-card__logo-img"
+            contain
           />
-          <v-icon v-else size="24">mdi-office-building</v-icon>
-        </v-avatar>
+          <div v-else class="institution-card__logo-placeholder">
+            <v-icon size="22" color="primary">mdi-office-building</v-icon>
+          </div>
+        </div>
 
         <!-- Informações -->
         <div class="flex-grow-1 institution-info">
@@ -112,6 +110,28 @@ function getRoleLabel(role: UserInstitutionRole): string {
 </script>
 
 <style scoped lang="scss">
+.institution-card__logo {
+  width: 56px;
+  height: 44px;
+  border-radius: 6px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.institution-card__logo-img {
+  width: 100%;
+  height: 100%;
+}
+
+.institution-card__logo-placeholder {
+  width: 100%;
+  height: 100%;
+  background: rgba(var(--v-theme-primary), 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .institution-card {
   transition: all 0.2s ease;
   border-radius: 12px;

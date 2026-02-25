@@ -6,20 +6,18 @@
         class="text-none mx-2"
         :disabled="!hasInstitutions"
       >
-        <v-avatar
-          size="32"
-          :color="activeInstitution ? 'primary' : 'grey'"
-          variant="tonal"
-          class="mr-2"
-        >
+        <div class="switcher-logo mr-2">
           <v-img
             v-if="activeInstitution?.logoThumbnailUrl || activeInstitution?.logoUrl"
             :src="activeInstitution.logoThumbnailUrl || activeInstitution.logoUrl"
-            :alt="activeInstitution.acronym"
-            cover
+            :alt="activeInstitution?.acronym"
+            class="switcher-logo__img"
+            contain
           />
-          <v-icon v-else size="20">mdi-office-building</v-icon>
-        </v-avatar>
+          <div v-else class="switcher-logo__placeholder">
+            <v-icon size="16" :color="activeInstitution ? 'primary' : 'grey'">mdi-office-building</v-icon>
+          </div>
+        </div>
 
         <div class="d-flex flex-column align-start">
           <span class="text-caption text-medium-emphasis">Instituição</span>
@@ -71,20 +69,18 @@
           Você está prestes a trocar para:
         </p>
         <div class="d-flex align-center pa-3 bg-grey-lighten-4 rounded">
-          <v-avatar
-            size="48"
-            color="primary"
-            variant="tonal"
-            class="mr-3"
-          >
+          <div class="dialog-logo mr-3">
             <v-img
               v-if="selectedInstitution?.logoThumbnailUrl || selectedInstitution?.logoUrl"
               :src="selectedInstitution.logoThumbnailUrl || selectedInstitution.logoUrl"
-              :alt="selectedInstitution.acronym"
-              cover
+              :alt="selectedInstitution?.acronym"
+              class="dialog-logo__img"
+              contain
             />
-            <v-icon v-else>mdi-office-building</v-icon>
-          </v-avatar>
+            <div v-else class="dialog-logo__placeholder">
+              <v-icon color="primary">mdi-office-building</v-icon>
+            </div>
+          </div>
           <div>
             <div class="font-weight-bold">
               {{ selectedInstitution?.acronym }}
@@ -174,3 +170,49 @@ const confirmSwitch = async () => {
   }
 }
 </script>
+
+<style scoped>
+.switcher-logo {
+  width: 38px;
+  height: 30px;
+  border-radius: 5px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.switcher-logo__img {
+  width: 100%;
+  height: 100%;
+}
+
+.switcher-logo__placeholder {
+  width: 100%;
+  height: 100%;
+  background: rgba(var(--v-theme-primary), 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dialog-logo {
+  width: 64px;
+  height: 50px;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.dialog-logo__img {
+  width: 100%;
+  height: 100%;
+}
+
+.dialog-logo__placeholder {
+  width: 100%;
+  height: 100%;
+  background: rgba(var(--v-theme-primary), 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+</style>

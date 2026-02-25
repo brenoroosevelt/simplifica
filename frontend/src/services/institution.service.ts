@@ -87,6 +87,16 @@ class InstitutionService {
   }
 
   /**
+   * Remove a logo de uma instituição.
+   * @param id ID da instituição
+   * @returns Promise com instituição atualizada
+   */
+  async deleteLogo(id: string): Promise<Institution> {
+    const response = await apiClient.delete<Institution>(`${this.BASE_PATH}/${id}/logo`)
+    return response.data
+  }
+
+  /**
    * Retorna lista de instituições do usuário logado.
    * @returns Promise com lista de vínculos usuário-instituição
    */
@@ -187,7 +197,7 @@ class InstitutionService {
     const formData = new FormData()
 
     Object.entries(data).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
+      if (value !== undefined && value !== null && key !== 'removeImage') {
         if (key === 'logo' && value instanceof File) {
           formData.append('logo', value)
         } else if (key !== 'logo') {

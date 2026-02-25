@@ -105,7 +105,7 @@ public class FileValidationService {
         return switch (category) {
             case INSTITUTION_LOGO, VALUE_CHAIN_IMAGE, TRAINING_COVER ->
                     storageProperties.getAllowedImageTypes();
-            case PROCESS_MAPPING, PROCESS_DOCUMENT, TRAINING_ATTACHMENT ->
+            case PROCESS_MAPPING, PROCESS_DOCUMENT, TRAINING_ATTACHMENT, NORMATIVE_FILE ->
                     storageProperties.getAllowedDocumentTypes();
             case TRAINING_VIDEO ->
                     storageProperties.getAllowedVideoTypes();

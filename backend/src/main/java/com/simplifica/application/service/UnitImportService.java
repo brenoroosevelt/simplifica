@@ -130,12 +130,13 @@ public class UnitImportService {
      */
     private UnitImportRowDTO parseRow(CSVRecord record) {
         return UnitImportRowDTO.builder()
-                .name(getColumnValue(record, "name"))
-                .acronym(getColumnValue(record, "acronym"))
-                .description(getColumnValue(record, "description"))
-                .active(parseBoolean(getColumnValue(record, "active"), true))
-                .institutionId(getColumnValue(record, "institutionId"))
-                .institutionAcronym(getColumnValue(record, "institutionAcronym"))
+                .name(getColumnValue(record, "nome"))
+                .acronym(getColumnValue(record, "sigla"))
+                .parentUnit(getColumnValue(record, "unidadeSuperior"))
+                .description(getColumnValue(record, "descricao"))
+                .active(parseBoolean(getColumnValue(record, "status"), true))
+                .institutionId(getColumnValue(record, "instituicaoId"))
+                .institutionAcronym(getColumnValue(record, "instituicaoSigla"))
                 .build();
     }
 
@@ -165,7 +166,17 @@ public class UnitImportService {
         if (value == null || value.isBlank()) {
             return defaultValue;
         }
-        return Boolean.parseBoolean(value);
+        String normalized = removeAccents(value.trim().toLowerCase());
+        return switch (normalized) {
+            case "1", "sim", "s", "true", "verdadeiro" -> true;
+            case "0", "nao", "n", "false", "falso" -> false;
+            default -> defaultValue;
+        };
+    }
+
+    private String removeAccents(String text) {
+        return java.text.Normalizer.normalize(text, java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
     }
 
     /**
@@ -230,27 +241,33 @@ public class UnitImportService {
     private void validateAndCreateUnit(UnitImportRowDTO row, UUID institutionId) {
         // Validate required fields
         if (row.getName() == null || row.getName().isBlank()) {
-            throw new ValidationException("Name is required");
+            throw new ValidationException("Campo 'nome' é obrigatório");
         }
         if (row.getAcronym() == null || row.getAcronym().isBlank()) {
-            throw new ValidationException("Acronym is required");
+            throw new ValidationException("Campo 'sigla' é obrigatório");
         }
 
         // Validate field lengths
         if (row.getName().length() > 255) {
-            throw new ValidationException("Name exceeds maximum length of 255 characters");
+            throw new ValidationException("Nome excede o máximo de 255 caracteres");
         }
         if (row.getAcronym().length() > 50) {
-            throw new ValidationException("Acronym exceeds maximum length of 50 characters");
+            throw new ValidationException("Sigla excede o máximo de 50 caracteres");
         }
         if (row.getDescription() != null && row.getDescription().length() > 5000) {
-            throw new ValidationException("Description exceeds maximum length of 5000 characters");
+            throw new ValidationException("Descrição excede o máximo de 5000 caracteres");
+        }
+
+        // Validate parentUnit length
+        if (row.getParentUnit() != null && row.getParentUnit().length() > 255) {
+            throw new ValidationException("Unidade superior excede o máximo de 255 caracteres");
         }
 
         // Create DTO
         CreateUnitDTO createDTO = CreateUnitDTO.builder()
                 .name(row.getName())
                 .acronym(row.getAcronym())
+                .parentUnit(row.getParentUnit())
                 .description(row.getDescription())
                 .active(row.getActive() != null ? row.getActive() : true)
                 .build();
@@ -277,18 +294,11 @@ public class UnitImportService {
      */
     private String extractFieldFromException(Exception e) {
         String message = e.getMessage().toLowerCase();
-        if (message.contains("name")) {
-            return "name";
-        }
-        if (message.contains("acronym")) {
-            return "acronym";
-        }
-        if (message.contains("description")) {
-            return "description";
-        }
-        if (message.contains("institution")) {
-            return "institution";
-        }
+        if (message.contains("nome")) return "nome";
+        if (message.contains("sigla")) return "sigla";
+        if (message.contains("unidade superior")) return "unidadeSuperior";
+        if (message.contains("descri")) return "descricao";
+        if (message.contains("institui")) return "instituicao";
         return null;
     }
 }
