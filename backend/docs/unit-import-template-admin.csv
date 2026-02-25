@@ -1,0 +1,4 @@
+name,acronym,description,active,institutionId,institutionAcronym
+Unidade de Tecnologia da Informação,TI,Responsável pela infraestrutura de TI,true,,INST-1
+Recursos Humanos,RH,Gestão de pessoas e talentos,true,550e8400-e29b-41d4-a716-446655440000,
+Financeiro,FIN,Controles financeiros e contábeis,true,,INST-2
