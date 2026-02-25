@@ -29,5 +29,10 @@ public class UpdateTrainingDTO {
     @Size(max = 10000, message = "Content must not exceed 10000 characters")
     private String content;
 
+    private String trainingType;
+
+    @Size(max = 1024, message = "External link must not exceed 1024 characters")
+    private String externalLink;
+
     private Boolean active;
 }

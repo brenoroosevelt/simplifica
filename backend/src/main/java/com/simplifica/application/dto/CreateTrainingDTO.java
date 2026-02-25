@@ -2,7 +2,6 @@ package com.simplifica.application.dto;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -34,7 +33,11 @@ public class CreateTrainingDTO {
     @Size(max = 10000, message = "Content must not exceed 10000 characters")
     private String content;
 
-    @NotEmpty(message = "At least one video is required")
+    private String trainingType; // "VIDEO_SEQUENCE" or "LINK"
+
+    @Size(max = 1024, message = "External link must not exceed 1024 characters")
+    private String externalLink;
+
     @Valid
     private List<CreateTrainingVideoDTO> videos;
 

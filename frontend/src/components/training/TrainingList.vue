@@ -57,37 +57,29 @@
         md="6"
         lg="4"
       >
-        <!-- DEBUG -->
-        <div v-if="training.coverImageUrl" style="display: none">
-          {{ console.log('Training cover:', training.title, 'URL:', training.coverImageUrl, 'Thumbnail:', training.coverImageThumbnailUrl) }}
-        </div>
         <v-card
           class="training-card"
           :class="{ 'training-card--inactive': !training.active }"
           variant="flat"
           border
           hover
-          @click="$emit('view', training)"
+          @click="handleCardClick(training)"
         >
-          <v-img
-            v-if="training.coverImageUrl"
-            :src="training.coverImageThumbnailUrl || training.coverImageUrl"
-            height="200"
-            cover
-            class="training-card__image"
-          />
-          <div
-            v-else
-            class="training-card__placeholder"
-          >
-            <v-icon size="64" color="grey-lighten-2">
-              mdi-school-outline
-            </v-icon>
+          <div class="training-card__cover">
+            <v-img
+              v-if="training.coverImageUrl"
+              :src="training.coverImageThumbnailUrl || training.coverImageUrl"
+              height="200"
+              cover
+              class="training-card__img"
+            />
+            <div v-else class="training-card__placeholder">
+              <v-icon size="64" color="white" style="opacity: 0.4">mdi-school-outline</v-icon>
+            </div>
+            <div class="training-card__title-overlay">
+              <span class="text-body-1 font-weight-medium text-white">{{ training.title }}</span>
+            </div>
           </div>
-
-          <v-card-title class="text-h6">
-            {{ training.title }}
-          </v-card-title>
 
           <v-card-text>
             <p
@@ -99,44 +91,50 @@
 
             <div class="d-flex align-center justify-space-between gap-2 flex-wrap">
               <div class="d-flex align-center gap-2">
-                <v-chip size="small" prepend-icon="mdi-play-circle" color="primary" variant="tonal">
-                  {{ training.videoCount }} vídeo{{ training.videoCount !== 1 ? 's' : '' }}
-                </v-chip>
                 <v-chip
-                  v-if="training.totalDurationMinutes > 0"
+                  v-if="training.trainingType === 'LINK'"
                   size="small"
-                  prepend-icon="mdi-clock-outline"
+                  prepend-icon="mdi-link"
+                  color="secondary"
                   variant="tonal"
                 >
-                  {{ training.totalDurationMinutes }} min
+                  Link externo
                 </v-chip>
+                <template v-else>
+                  <v-chip size="small" prepend-icon="mdi-play-circle" color="primary" variant="tonal">
+                    {{ training.videoCount }} vídeo{{ training.videoCount !== 1 ? 's' : '' }}
+                  </v-chip>
+                  <v-chip
+                    v-if="training.totalDurationMinutes > 0"
+                    size="small"
+                    prepend-icon="mdi-clock-outline"
+                    variant="tonal"
+                  >
+                    {{ training.totalDurationMinutes }} min
+                  </v-chip>
+                </template>
               </div>
-              <v-chip
-                v-if="!training.active"
-                color="error"
-                size="small"
-              >
-                Inativa
-              </v-chip>
+              <v-chip v-if="!training.active" color="error" size="small">Inativa</v-chip>
             </div>
           </v-card-text>
 
           <v-divider />
 
-          <v-card-actions>
+          <v-card-actions class="pa-2">
             <v-spacer />
             <v-btn
               icon="mdi-pencil"
-              variant="text"
               size="small"
-              @click.stop="$emit('edit', training)"
+              variant="text"
+              color="primary"
+              @click.stop="emit('edit', training)"
             />
             <v-btn
               icon="mdi-delete"
-              variant="text"
               size="small"
+              variant="text"
               color="error"
-              @click.stop="$emit('delete', training)"
+              @click.stop="emit('delete', training)"
             />
           </v-card-actions>
         </v-card>
@@ -157,7 +155,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
 import { useDebounceFn } from '@vueuse/core'
 import type { Training } from '@/types/training.types'
 
@@ -202,18 +200,13 @@ const truncateText = (text: string, maxLength: number): string => {
   return text.substring(0, maxLength) + '...'
 }
 
-// Debug: log trainings when they change
-watch(() => props.trainings, (newTrainings) => {
-  console.log('=== Training List Updated ===')
-  newTrainings.forEach(t => {
-    console.log(`${t.title}:`, {
-      hasCover: !!t.coverImageUrl,
-      coverUrl: t.coverImageUrl,
-      thumbnailUrl: t.coverImageThumbnailUrl
-    })
-  })
-  console.log('============================')
-}, { immediate: true })
+const handleCardClick = (training: Training) => {
+  if (training.trainingType === 'LINK' && training.externalLink) {
+    window.open(training.externalLink, '_blank')
+  } else {
+    emit('view', training)
+  }
+}
 </script>
 
 <style scoped>
@@ -237,8 +230,19 @@ watch(() => props.trainings, (newTrainings) => {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
-.training-card__image {
+
+.training-card__cover {
   position: relative;
+  height: 200px;
+  overflow: hidden;
+}
+
+.training-card__img {
+  transition: transform 0.3s ease;
+}
+
+.training-card:hover .training-card__img {
+  transform: scale(1.04);
 }
 
 .training-card__placeholder {
@@ -247,6 +251,21 @@ watch(() => props.trainings, (newTrainings) => {
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.training-card__title-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 16px 12px 8px;
+  background: rgba(0, 0, 0, 0.70);
+  line-height: 1.3;
+
+  span {
+    display: block;
+    word-break: break-word;
+  }
 }
 
 .gap-2 {

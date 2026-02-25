@@ -33,6 +33,8 @@ public class TrainingDTO {
     private String content;
     private String coverImageUrl;
     private String coverImageThumbnailUrl;
+    private String trainingType;
+    private String externalLink;
     private List<TrainingVideoDTO> videos;
     private Integer videoCount;
     private Integer totalDurationMinutes;
@@ -61,6 +63,8 @@ public class TrainingDTO {
                 .content(training.getContent())
                 .coverImageUrl(training.getCoverImageUrl())
                 .coverImageThumbnailUrl(training.getCoverImageThumbnailUrl())
+                .trainingType(training.getTrainingType() != null ? training.getTrainingType().name() : "VIDEO_SEQUENCE")
+                .externalLink(training.getExternalLink())
                 .videoCount(training.getVideoCount())
                 .totalDurationMinutes(training.getTotalDurationMinutes())
                 .active(training.isActive())

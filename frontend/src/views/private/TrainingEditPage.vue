@@ -33,20 +33,24 @@
         :loading="isSaving"
         @submit="handleFormSubmit"
         @cancel="handleCancel"
+        @update:training-type="currentTrainingType = $event"
       />
 
-      <!-- Divider -->
-      <v-divider class="my-6" />
+      <!-- Divider and Video Manager only for VIDEO_SEQUENCE type -->
+      <template v-if="currentTrainingType === 'VIDEO_SEQUENCE'">
+        <!-- Divider -->
+        <v-divider class="my-6" />
 
-      <!-- Video Manager (without card wrapper) -->
-      <training-video-manager
-        :videos="localVideos"
-        :training-id="isEditMode ? trainingId : undefined"
-        @add="handleVideoAdd"
-        @update="handleVideoUpdate"
-        @delete="handleVideoDelete"
-        @reorder="handleVideoReorder"
-      />
+        <!-- Video Manager (without card wrapper) -->
+        <training-video-manager
+          :videos="localVideos"
+          :training-id="isEditMode ? trainingId : undefined"
+          @add="handleVideoAdd"
+          @update="handleVideoUpdate"
+          @delete="handleVideoDelete"
+          @reorder="handleVideoReorder"
+        />
+      </template>
 
       <!-- Save Button -->
       <div class="d-flex justify-end mt-6" style="gap: 12px">
@@ -86,7 +90,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import PageHeader from '@/components/common/PageHeader.vue'
 import TrainingForm from '@/components/training/TrainingForm.vue'
@@ -107,6 +111,7 @@ const router = useRouter()
 // Detect mode based on route name instead of params
 const isCreationMode = computed(() => route.name === 'training-new')
 const isEditMode = computed(() => !isCreationMode.value)
+const trainingId = computed(() => route.params.id as string)
 
 // Page title based on mode
 const pageTitle = computed(() =>
@@ -116,12 +121,23 @@ const pageTitle = computed(() =>
 // Local videos state for creation mode (before training is created)
 const localVideos = ref<TrainingVideo[]>([])
 
+// Track current training type to show/hide VideoManager
+const currentTrainingType = ref<string>('VIDEO_SEQUENCE')
+
 // Composables must be called at top level of setup (not inside computed/watch)
 const editComposable = useTrainingDetail(route.params.id as string || '')
 const createComposable = useTrainingForm()
 
 // Extract methods and state based on mode
 const training = computed(() => isEditMode.value ? editComposable.training.value : null)
+
+// Sync currentTrainingType when training loads (edit mode)
+watch(
+  () => editComposable.training.value,
+  (t) => {
+    if (t) currentTrainingType.value = t.trainingType || 'VIDEO_SEQUENCE'
+  }
+)
 const isLoading = ref(false)
 const isSaving = ref(false)
 const error = ref<string | null>(null)
@@ -174,26 +190,25 @@ const handleFormSubmit = async (data: TrainingUpdateRequest | TrainingCreateRequ
       // Creation mode
       isSaving.value = true
 
-      // Validate at least one video
-      if (localVideos.value.length === 0) {
+      const isVideoType = (data as any).trainingType !== 'LINK'
+
+      // Validate at least one video for VIDEO_SEQUENCE type
+      if (isVideoType && localVideos.value.length === 0) {
         showSnackbar('É necessário adicionar pelo menos um vídeo', 'error')
         isSaving.value = false
         return
       }
 
-      // Prepare videos for creation
-      const videosData: TrainingVideoCreateRequest[] = localVideos.value.map((video, index) => ({
-        title: video.title,
-        youtubeUrl: video.youtubeUrl,
-        content: video.content?.trim() || undefined,
-        durationMinutes: video.durationMinutes || 0,
-        orderIndex: index,
-      }))
-
-      // Create training with videos
+      // Create training with optional videos
       const createData: TrainingCreateRequest = {
         ...data,
-        videos: videosData,
+        videos: isVideoType ? localVideos.value.map((video, index) => ({
+          title: video.title,
+          youtubeUrl: video.youtubeUrl,
+          content: video.content?.trim() || undefined,
+          durationMinutes: video.durationMinutes || 0,
+          orderIndex: index,
+        })) : undefined,
       }
 
       const created = await createComposable.createTraining(createData)

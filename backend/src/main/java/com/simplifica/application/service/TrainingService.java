@@ -10,6 +10,7 @@ import com.simplifica.application.dto.UpdateTrainingVideoDTO;
 import com.simplifica.config.tenant.TenantContext;
 import com.simplifica.domain.entity.Institution;
 import com.simplifica.domain.entity.Training;
+import com.simplifica.domain.entity.TrainingType;
 import com.simplifica.domain.entity.TrainingVideo;
 import com.simplifica.infrastructure.repository.TrainingRepository;
 import com.simplifica.infrastructure.repository.TrainingSpecifications;
@@ -170,15 +171,24 @@ public class TrainingService {
             );
         }
 
-        // Validate at least one video
-        if (createDTO.getVideos() == null || createDTO.getVideos().isEmpty()) {
-            throw new BadRequestException("At least one video is required for a training");
+        // Determine training type
+        TrainingType trainingType = TrainingType.VIDEO_SEQUENCE;
+        if ("LINK".equalsIgnoreCase(createDTO.getTrainingType())) {
+            trainingType = TrainingType.LINK;
         }
 
-        // Validate unique order indexes
-        validateUniqueOrderIndexes(createDTO.getVideos().stream()
-                .map(CreateTrainingVideoDTO::getOrderIndex)
-                .collect(Collectors.toList()));
+        if (trainingType == TrainingType.VIDEO_SEQUENCE) {
+            if (createDTO.getVideos() == null || createDTO.getVideos().isEmpty()) {
+                throw new BadRequestException("At least one video is required for a VIDEO_SEQUENCE training");
+            }
+            validateUniqueOrderIndexes(createDTO.getVideos().stream()
+                    .map(CreateTrainingVideoDTO::getOrderIndex)
+                    .collect(Collectors.toList()));
+        } else {
+            if (createDTO.getExternalLink() == null || createDTO.getExternalLink().isBlank()) {
+                throw new BadRequestException("External link is required for a LINK training");
+            }
+        }
 
         // Get institution
         Institution institution = institutionService.findById(institutionId);
@@ -189,20 +199,24 @@ public class TrainingService {
                 .title(createDTO.getTitle())
                 .description(createDTO.getDescription())
                 .content(createDTO.getContent())
+                .trainingType(trainingType)
+                .externalLink(trainingType == TrainingType.LINK ? createDTO.getExternalLink() : null)
                 .active(createDTO.getActive() != null ? createDTO.getActive() : true)
                 .build();
 
-        // Create video entities
-        for (CreateTrainingVideoDTO videoDTO : createDTO.getVideos()) {
-            TrainingVideo video = TrainingVideo.builder()
-                    .training(training)
-                    .title(videoDTO.getTitle())
-                    .youtubeUrl(videoDTO.getYoutubeUrl())
-                    .content(videoDTO.getContent())
-                    .durationMinutes(videoDTO.getDurationMinutes())
-                    .orderIndex(videoDTO.getOrderIndex())
-                    .build();
-            training.addVideo(video);
+        // Create video entities (VIDEO_SEQUENCE only)
+        if (trainingType == TrainingType.VIDEO_SEQUENCE) {
+            for (CreateTrainingVideoDTO videoDTO : createDTO.getVideos()) {
+                TrainingVideo video = TrainingVideo.builder()
+                        .training(training)
+                        .title(videoDTO.getTitle())
+                        .youtubeUrl(videoDTO.getYoutubeUrl())
+                        .content(videoDTO.getContent())
+                        .durationMinutes(videoDTO.getDurationMinutes())
+                        .orderIndex(videoDTO.getOrderIndex())
+                        .build();
+                training.addVideo(video);
+            }
         }
 
         // Save and return
@@ -246,6 +260,20 @@ public class TrainingService {
             training.setActive(updateDTO.getActive());
         }
 
+        // Update training type if provided
+        if (updateDTO.getTrainingType() != null) {
+            if ("LINK".equalsIgnoreCase(updateDTO.getTrainingType())) {
+                training.setTrainingType(TrainingType.LINK);
+            } else {
+                training.setTrainingType(TrainingType.VIDEO_SEQUENCE);
+            }
+        }
+
+        // Update external link if provided
+        if (updateDTO.getExternalLink() != null) {
+            training.setExternalLink(updateDTO.getExternalLink().isBlank() ? null : updateDTO.getExternalLink());
+        }
+
         Training updatedTraining = trainingRepository.save(training);
         LOGGER.info("Training {} updated successfully", id);
 
@@ -253,7 +281,7 @@ public class TrainingService {
     }
 
     /**
-     * Deletes a training (soft delete by setting active = false).
+     * Permanently deletes a training and all associated files.
      *
      * @param id the training UUID
      * @throws ResourceNotFoundException if the training is not found
@@ -268,18 +296,13 @@ public class TrainingService {
 
         validateTenantAccess(training);
 
-        // Soft delete
-        training.setActive(false);
-        trainingRepository.save(training);
+        // Delete all associated files (cover images, attachments, etc.)
+        storageService.deleteByEntity("Training", id);
 
-        // Delete cover image using new storage adapter system
-        storageService.deleteByEntityAndCategory(
-                "Training",
-                id,
-                com.simplifica.storage.domain.FileCategory.TRAINING_COVER
-        );
+        // Hard delete
+        trainingRepository.delete(training);
 
-        LOGGER.info("Training {} deleted successfully", id);
+        LOGGER.info("Training {} permanently deleted", id);
     }
 
     /**

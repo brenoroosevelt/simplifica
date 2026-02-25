@@ -3,6 +3,8 @@ package com.simplifica.domain.entity;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -62,6 +64,14 @@ public class Training {
 
     @Column(name = "cover_image_thumbnail_url", length = 1024)
     private String coverImageThumbnailUrl;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "training_type", nullable = false, length = 20)
+    @Builder.Default
+    private TrainingType trainingType = TrainingType.VIDEO_SEQUENCE;
+
+    @Column(name = "external_link", length = 1024)
+    private String externalLink;
 
     @OneToMany(mappedBy = "training", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

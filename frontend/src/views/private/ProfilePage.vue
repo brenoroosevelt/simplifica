@@ -32,61 +32,9 @@
         </v-card>
       </v-col>
 
-      <!-- Seção: Minhas Instituições + Segurança -->
+      <!-- Seção: Segurança -->
       <v-col cols="12" md="8">
         <v-row>
-          <!-- Seção: Minhas Instituições -->
-          <v-col cols="12">
-            <v-card variant="flat" border>
-              <v-card-title class="d-flex align-center pa-4">
-                <v-icon start size="20">mdi-office-building</v-icon>
-                <span class="text-h6 font-weight-medium">Minhas Instituições</span>
-              </v-card-title>
-
-              <v-divider />
-
-              <v-card-text v-if="loading" class="pa-4 text-center">
-                <v-progress-circular indeterminate color="primary" size="32" />
-                <p class="text-caption text-grey-darken-1 mt-2">Carregando...</p>
-              </v-card-text>
-
-              <v-card-text v-else-if="userInstitutions.length === 0" class="pa-6 text-center">
-                <v-icon size="48" color="grey-lighten-1" class="mb-2">
-                  mdi-office-building-outline
-                </v-icon>
-                <p class="text-body-2 text-grey-darken-1">
-                  Você ainda não está vinculado a nenhuma instituição.
-                </p>
-                <p class="text-caption text-grey-darken-1 mt-1">
-                  Aguarde o administrador vincular sua conta.
-                </p>
-              </v-card-text>
-
-              <v-card-text v-else class="pa-4">
-                <InstitutionCard
-                  v-for="userInstitution in userInstitutions"
-                  :key="userInstitution.id"
-                  :institution="userInstitution.institution"
-                  :roles="userInstitution.roles"
-                  :is-active="userInstitution.institution.id === activeInstitutionId"
-                  :clickable="userInstitution.institution.id !== activeInstitutionId"
-                  class="mb-3"
-                  @click="handleSelectInstitution"
-                />
-
-                <v-alert
-                  v-if="userInstitutions.length > 1"
-                  type="info"
-                  variant="tonal"
-                  density="compact"
-                >
-                  Clique em uma instituição para trocar
-                </v-alert>
-              </v-card-text>
-            </v-card>
-          </v-col>
-
-          <!-- Seção: Segurança -->
           <v-col cols="12">
             <v-card variant="flat" border>
               <v-card-title class="d-flex align-center pa-4">
@@ -162,29 +110,18 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import PageHeader from '@/components/common/PageHeader.vue'
-import InstitutionCard from '@/components/institution/InstitutionCard.vue'
 import UserAvatar from '@/components/common/UserAvatar.vue'
 import { useAuth } from '@/composables/useAuth'
-import { useAuthStore } from '@/stores/auth.store'
-import { useInstitutionStore } from '@/stores/institution.store'
 
 const { user } = useAuth()
-const authStore = useAuthStore()
-const institutionStore = useInstitutionStore()
-
-const loading = ref(false)
-const switching = ref(false)
 
 const snackbar = ref({
   show: false,
   message: '',
   color: 'success',
 })
-
-const userInstitutions = computed(() => authStore.institutions)
-const activeInstitutionId = computed(() => institutionStore.activeInstitutionId)
 
 const statusColor = computed(() => {
   switch (user.value?.status) {
@@ -259,30 +196,4 @@ function showSnackbar(message: string, color: string): void {
     color,
   }
 }
-
-async function handleSelectInstitution(institutionId: string): Promise<void> {
-  if (institutionId === activeInstitutionId.value || switching.value) return
-
-  switching.value = true
-  try {
-    await institutionStore.selectInstitution(institutionId)
-    window.location.reload()
-  } catch (error) {
-    console.error('Failed to switch institution:', error)
-    showSnackbar('Erro ao trocar instituição', 'error')
-    switching.value = false
-  }
-}
-
-onMounted(async () => {
-  loading.value = true
-  try {
-    await authStore.fetchUserInstitutions()
-  } catch (err) {
-    console.error('Failed to load user institutions:', err)
-    showSnackbar('Erro ao carregar instituições vinculadas', 'error')
-  } finally {
-    loading.value = false
-  }
-})
 </script>

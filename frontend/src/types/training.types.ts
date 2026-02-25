@@ -1,3 +1,5 @@
+export type TrainingType = 'VIDEO_SEQUENCE' | 'LINK'
+
 export interface TrainingVideo {
   id: string
   trainingId?: string
@@ -19,6 +21,8 @@ export interface Training {
   title: string
   description?: string
   content?: string
+  trainingType: TrainingType
+  externalLink?: string
   coverImageUrl?: string
   coverImageThumbnailUrl?: string
   videos: TrainingVideo[]
@@ -41,7 +45,9 @@ export interface TrainingCreateRequest {
   title: string
   description?: string
   content?: string
-  videos: TrainingVideoPayload[]
+  trainingType: TrainingType
+  externalLink?: string
+  videos?: TrainingVideoPayload[]
   active?: boolean
 }
 
@@ -49,6 +55,8 @@ export interface TrainingUpdateRequest {
   title: string
   description?: string
   content?: string
+  trainingType?: TrainingType
+  externalLink?: string
   active?: boolean
 }
 

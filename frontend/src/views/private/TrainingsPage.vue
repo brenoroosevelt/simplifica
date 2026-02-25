@@ -40,7 +40,7 @@
             <strong>{{ selectedTraining?.title }}</strong>?
           </p>
           <p class="text-body-2 text-medium-emphasis">
-            Esta ação irá desativar a capacitação. Os dados serão preservados no sistema.
+            Esta ação é irreversível. A capacitação e todos os arquivos associados serão excluídos permanentemente.
           </p>
         </v-card-text>
         <v-card-actions class="pa-4 d-flex" style="gap: 12px;">
