@@ -51,6 +51,9 @@ public class ValueChainService {
     @Autowired
     private FileStorageService fileStorageService;
 
+    @Autowired
+    private com.simplifica.storage.service.StorageService storageService;
+
     /**
      * Gets the current institution ID from TenantContext.
      * CRITICAL: This should always be set by the request interceptor.
@@ -226,16 +229,24 @@ public class ValueChainService {
         // Validate tenant access
         validateTenantAccess(valueChain);
 
-        // Delete old image if exists
-        if (valueChain.getImageUrl() != null) {
-            LOGGER.debug("Deleting old image for value chain {}", id);
-            fileStorageService.deleteFile(valueChain.getImageUrl());
-        }
+        // Delete old image if exists using new storage service
+        storageService.deleteByEntityAndCategory(
+                "ValueChain",
+                id,
+                com.simplifica.storage.domain.FileCategory.VALUE_CHAIN_IMAGE
+        );
 
-        // Upload new image
-        FileStorageService.FileUploadResult uploadResult =
-                fileStorageService.storeImage(file, "value-chains");
-        valueChain.setImageUrls(uploadResult.getFileUrl(), uploadResult.getThumbnailUrl());
+        // Upload new image using new storage service
+        com.simplifica.storage.service.StorageService.FileUploadResult uploadResult =
+                storageService.storeFile(
+                        file,
+                        "ValueChain",
+                        id,
+                        com.simplifica.storage.domain.FileCategory.VALUE_CHAIN_IMAGE,
+                        true // generate thumbnail
+                );
+
+        valueChain.setImageUrls(uploadResult.fileUrl(), uploadResult.thumbnailUrl());
 
         ValueChain saved = valueChainRepository.save(valueChain);
         LOGGER.info("Image uploaded successfully for value chain {}", id);
@@ -260,15 +271,16 @@ public class ValueChainService {
         // Validate tenant access
         validateTenantAccess(valueChain);
 
-        // Delete image file if exists
-        if (valueChain.getImageUrl() != null) {
-            fileStorageService.deleteFile(valueChain.getImageUrl());
-            valueChain.clearImage();
-            valueChainRepository.save(valueChain);
-            LOGGER.info("Image deleted successfully for value chain {}", id);
-        } else {
-            LOGGER.debug("No image to delete for value chain {}", id);
-        }
+        // Delete image files using new storage service
+        storageService.deleteByEntityAndCategory(
+                "ValueChain",
+                id,
+                com.simplifica.storage.domain.FileCategory.VALUE_CHAIN_IMAGE
+        );
+
+        valueChain.clearImage();
+        valueChainRepository.save(valueChain);
+        LOGGER.info("Image deleted successfully for value chain {}", id);
     }
 
     /**

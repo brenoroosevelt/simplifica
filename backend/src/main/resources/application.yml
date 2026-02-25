@@ -113,14 +113,40 @@ app:
     from: ${EMAIL_FROM:noreply@simplifica.com}
     from-name: ${EMAIL_FROM_NAME:Simplifica}
 
-  # Storage Configuration
+  # Storage Configuration (Flysystem-style)
+  # Switch storage provider via STORAGE_PROVIDER env variable
+  # Options: local, dropbox, googledrive
   storage:
     provider: ${STORAGE_PROVIDER:local}
-    local:
-      base-path: ${STORAGE_LOCAL_BASE_PATH:/tmp/simplifica/uploads}
-      public-url: ${STORAGE_LOCAL_PUBLIC_URL:http://localhost:8080/api/public/uploads}
-    max-file-size-mb: ${STORAGE_MAX_FILE_SIZE_MB:5}
-    allowed-extensions: ${STORAGE_ALLOWED_EXTENSIONS:jpg,jpeg,png,gif,webp}
+
+    # Filesystem Storage (default)
+    filesystem:
+      root-path: ${STORAGE_FILESYSTEM_ROOT:/tmp/simplifica/storage}
+
+    # Dropbox Storage
+    dropbox:
+      access-token: ${STORAGE_DROPBOX_ACCESS_TOKEN:}
+      base-path: ${STORAGE_DROPBOX_BASE_PATH:/simplifica}
+
+    # Google Drive Storage
+    google-drive:
+      credentials-path: ${STORAGE_GOOGLEDRIVE_CREDENTIALS_PATH:}
+      base-folder-name: ${STORAGE_GOOGLEDRIVE_BASE_FOLDER_NAME:Simplifica}
+
+    # File validation
+    max-file-size: 104857600  # 100MB in bytes
+    max-video-size: 524288000  # 500MB in bytes
+    allowed-image-types: image/jpeg,image/png,image/webp,image/gif
+    allowed-document-types: application/pdf,application/zip
+    allowed-video-types: video/mp4,video/webm
+
+    # Cache configuration
+    cache:
+      enabled: true
+      max-age: 86400  # 24 hours in seconds
+
+  # Base URL for file serving
+  base-url: ${APP_BASE_URL:http://localhost:8080/api}
 
 # Actuator Configuration
 management:

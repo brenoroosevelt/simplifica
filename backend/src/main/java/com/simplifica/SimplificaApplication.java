@@ -11,7 +11,10 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
  * user management, and a RESTful API for the Simplifica platform.
  */
 @SpringBootApplication
-@EnableJpaRepositories(basePackages = "com.simplifica.infrastructure.repository")
+@EnableJpaRepositories(basePackages = {
+        "com.simplifica.infrastructure.repository",
+        "com.simplifica.storage.repository"
+})
 public class SimplificaApplication {
 
     public static void main(String[] args) {

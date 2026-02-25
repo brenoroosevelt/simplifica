@@ -93,6 +93,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Public endpoints
                         .requestMatchers("/public/**").permitAll()
+                        .requestMatchers("/files/**").permitAll()
                         .requestMatchers("/oauth2/**").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
 
