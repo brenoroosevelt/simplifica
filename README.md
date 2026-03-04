@@ -1,4 +1,4 @@
-# Simplifica
+# Sistema Simplifica
 
 Sistema integrado de gestão de portfólio de processos e mapeamento de riscos.
 
